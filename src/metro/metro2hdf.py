@@ -255,7 +255,7 @@ def convert_ascii_file(channel_file, h5ch, compress_args={}, **kwargs):
 
                 h5ch.create_dataset(
                     str(scan_idx),
-                    data=numpy.frombuffer(
+                    data=numpy.fromstring(
                         data_str,
                         count=data_str.count("\n"),
                         sep="\n",
@@ -302,7 +302,7 @@ def convert_ascii_file(channel_file, h5ch, compress_args={}, **kwargs):
                         )
 
                         try:
-                            data = numpy.frombuffer(
+                            data = numpy.fromstring(
                                 data_str,
                                 sep=" ",
                                 count=data_str.count("\n") * column_count,
