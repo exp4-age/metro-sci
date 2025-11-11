@@ -16,6 +16,9 @@ import numpy  # noqa
 import metro
 from metro.services import profiles
 
+from metro.services import logger
+log = logger.log(__name__)
+
 if not metro.core_mode:
     from metro.frontend import controller
     from metro.frontend import dialogs
@@ -27,16 +30,15 @@ QtWidgets = metro.QtWidgets
 
 
 def _on_exception(*args):
-    with open(metro.LOCAL_PATH + '/exceptions.log', 'a') as logfile:
-        logfile.write('----------------------------'
+    with open(os.path.join(metro.LOCAL_PATH, 'exceptions.log'), 'a') as logf:
+        logf.write('----------------------------'
                       '----------------------------\n')
-        logfile.write('- Unchecked exception caught on {0} -\n'.format(
-            time.strftime('%Y/%m/%d at %H:%M:%S'))
-        )
-        logfile.write('----------------------------'
+        logf.write('- Unchecked exception caught on {0} -\n'.format(
+            time.strftime('%Y/%m/%d at %H:%M:%S')))
+        logf.write('----------------------------'
                       '----------------------------\n')
-        traceback.print_exception(*args, file=logfile)
-        logfile.write('\n')
+        traceback.print_exception(*args, file=logf)
+        logf.write('\n')
 
     traceback.print_exception(*args)
 
@@ -56,6 +58,17 @@ class AbstractApplication(object):
         # executing after unchecked exceptions. Some platforms will kill
         # a PyQt5 application in this case.
         sys.excepthook = _on_exception
+
+        # Set AppUserModelID for Windows 7 and later so that Metro uses
+        # its assigned taskbar icon instead of grabbing the one with the
+        # same AppUserModelID (would probably result in no icon at all)
+        if os.name == 'nt':
+            try:
+                myappid = u"{}.{}".format(metro.SRC_ROOT, metro.WINDOW_TITLE)
+                from ctypes import windll
+                windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+            except AttributeError:
+                pass
 
         metro.app = self
         metro.experimental = args.experimental
@@ -80,8 +93,9 @@ class AbstractApplication(object):
         elif version is None:
             try:
                 version_hash = subprocess.check_output(
-                    ['git', 'rev-parse', 'HEAD'], stderr=subprocess.STDOUT
-                )
+                    ['git', 'rev-parse', 'HEAD'],
+                    stderr=subprocess.STDOUT, cwd=metro.SRC_ROOT
+                    )
             except FileNotFoundError:
                 version = None
                 version_short = None
@@ -95,8 +109,8 @@ class AbstractApplication(object):
                 else:
                     short_hash = subprocess.check_output(
                         ['git', 'rev-parse', '--short', 'HEAD'],
-                        stderr=subprocess.STDOUT
-                    )
+                        stderr=subprocess.STDOUT, cwd=metro.SRC_ROOT
+                        )
 
                     version = version_hash.decode('ascii').strip()
                     version_short = short_hash.decode('ascii').strip()
@@ -384,7 +398,7 @@ class AbstractApplication(object):
 
     def loadProfile(self, path):
         actual_path = path if os.path.isfile(path) \
-            else '{0}/{1}.json'.format(metro.PROFILE_PATH, path)
+            else os.path.join(metro.PROFILE_PATH, '{0}.json'.format(path))
 
         profile = profiles.load(actual_path)
 
@@ -479,6 +493,9 @@ class AbstractApplication(object):
 
             dev_grp.restoreGeometry_(state['geometry'])
             self.addDeviceGroup(dev_grp)
+
+        profile_name = os.path.splitext(os.path.basename(actual_path))[0]
+        log.info('Profile "{0}" loaded'.format(profile_name))
 
         return profile, use_geometry
 
@@ -577,6 +594,9 @@ class AbstractApplication(object):
 
         profiles.save(path, profile)
 
+        profile_name = os.path.splitext(os.path.basename(path))[0]
+        log.info('Profile "{0}" saved'.format(profile_name))
+
         return profile
 
     def setIndicator(self, key, value):
@@ -651,22 +671,25 @@ class CoreApplication(QtCore.QCoreApplication, AbstractApplication):
         pass
 
     # details may be an exception, producing a stack trace
-    def showError(self, title, text, details=None):
-        print('!ERROR\t{0}\n\t{1}'.format(title, text))
+    def showError(self, title, text, details=None, log=log):
+        msg = '!ERROR\t{0}\n\t{1}'.format(title, text)
 
         if details is not None and not isinstance(details, Exception):
-            print('\t({0})'.format(details))
+            msg += '\n\t({0})'.format(details)
+
+        log.error(msg)
+        print(msg, flush=True)
 
     # Helper function to directly show an exception, using str(e) as
     # text. For exceptions other than RuntimeError it will also prefix
     # the exception type
-    def showException(self, title, e):
+    def showException(self, title, e, log=log):
         if isinstance(e, RuntimeError):
             text = str(e)
         else:
             text = '{0}: {1}'.format(e.__class__.__name__, str(e))
 
-        self.showError(title, text, details=e)
+        self.showError(title, text, details=e, log=log)
 
     def _getGeometryHash(self):
         geometry_hash = hashlib.md5()
@@ -789,6 +812,10 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
 
         self.main_window = controller.MainWindow()
 
+        # The GUI log handler has only just been created with the main window,
+        # so we use that as the handler from now on
+        self.main_window.logWindow.addLogger(__name__)
+
         if not metro.kiosk_mode:
             self.main_window.show()
 
@@ -827,14 +854,15 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
         raise RuntimeError('profile is required in kiosk mode')
 
     # details may be an exception, producing a stack trace
-    def showError(self, title, text, details=None):
+    def showError(self, title, text, details=None, log=log):
         msgBox = QtWidgets.QMessageBox()
 
         msgBox.setWindowTitle(f'Error - {metro.WINDOW_TITLE}')
         msgBox.setText(title)
         msgBox.setIcon(QtWidgets.QMessageBox.Critical)
 
-        msgBox.setInformativeText(text)
+        msg = text
+        msgBox.setInformativeText(msg)
 
         if details is not None:
             if isinstance(details, Exception):
@@ -842,7 +870,10 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
                     type(details), details, details.__traceback__
                 ))
 
+            msg += '\n\t{0}'.format(details)
             msgBox.setDetailedText(details)
+
+        log.error(msg)
 
         # Dirty hack from qt-project.org to increase the MessageBox
         # width by adding a spacer to its QGridLayout
@@ -858,13 +889,13 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
     # Helper function to directly show an exception, using str(e) as
     # text. For exceptions other than RuntimeError it will also prefix
     # the exception type
-    def showException(self, title, e):
+    def showException(self, title, e, log=log):
         if isinstance(e, RuntimeError):
             text = str(e)
         else:
             text = '{0}: {1}'.format(e.__class__.__name__, str(e))
 
-        self.showError(title, text, details=e)
+        self.showError(title, text, details=e, log=log)
 
     def _getGeometryHash(self):
         desktop_widget = self.desktop()

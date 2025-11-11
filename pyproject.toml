@@ -1,0 +1,103 @@
+[build-system]
+requires = [
+  "setuptools",
+  "numpy",
+  "cython",
+]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "metro-sci"
+version = "2025.7.9"
+description = "Metro framework to write control, DAQ and online analysis software for scientific experiments"
+requires-python = "==3.11.*"
+license = {file = "LICENSE"}
+authors = [
+  {name = "Philipp Schmidt", email = "philipp.schmidt@xfel.eu"},
+]
+dependencies = [
+  "h5py>=3.14.0",
+  "numpy>=2.2",
+  "pyqt5>=5.15.11",
+  "scipy>=1.16.0",
+  "xarray>=2025.7.0",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+    "Environment :: Console",
+    "Environment :: Win32 (MS Windows)",
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.6",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Scientific/Engineering :: Physics"
+]
+
+
+[tool.setuptools.package-data]
+metro = ["*.ui", "*.qml"]
+"metro.frontend" = ["logo.png", "Symbola.ttf"]
+
+[project.scripts]
+metro = "metro.main:start_regular"
+metro2hdf = "metro.metro2hdf:main"
+
+[project.entry-points."metro.device"]
+"analyze.angular_integrate" = "metro.devices.analyze.angular_integrate:Device"
+"analyze.fit1d" = "metro.devices.analyze.fit1d:Device"
+"analyze.moving_avg" = "metro.devices.analyze.moving_avg:Device"
+"analyze.scan_matrix" = "metro.devices.analyze.scan_matrix:Device"
+"analyze.seq_cov" = "metro.devices.analyze.seq_cov:Device"
+"display.fast_plot" = "metro.devices.display.fast_plot:Device"
+"display.hist1d" = "metro.devices.display.hist1d:Device"
+"display.hist2d" = "metro.devices.display.hist2d:Device"
+"display.image" = "metro.devices.display.image:Device"
+"display.ogl_plot" = "metro.devices.display.ogl_plot:Device"
+"display.plot" = "metro.devices.display.plot:Device"
+"display.plot_xy" = "metro.devices.display.plot_xy:Device"
+"display.polar_plot" = "metro.devices.display.polar_plot:Device"
+"display.sorted" = "metro.devices.display.sorted:Device"
+"display.value" = "metro.devices.display.value:Device"
+"display.waveform" = "metro.devices.display.waveform:Device"
+"project.generic2d" = "metro.devices.project.generic2d:Device"
+"project.window" = "metro.devices.project.window:Device"
+"util.measure_blocks" = "metro.devices.util.measure_blocks:Device"
+"util.memory" = "metro.devices.util.memory:Device"
+"util.serial_scan_server" = "metro.devices.util.serial_scan_server:Device"
+"util.ui_web_proxy" = "metro.devices.util.ui_web_proxy:Device"
+"util.debug.arguments" = "metro.devices.util.debug.arguments:Device"
+"util.debug.dependencies" = "metro.devices.util.debug.dependencies:Device"
+"util.debug.exception" = "metro.devices.util.debug.exception:Device"
+"util.debug.fail" = "metro.devices.util.debug.fail:Device"
+"util.debug.simple_device" = "metro.devices.util.debug.simple_device:Device"
+"util.simulate.camera" = "metro.devices.util.simulate.camera:Device"
+"util.simulate.indicators" = "metro.devices.util.simulate.indicators:Device"
+"util.simulate.logging" = "metro.devices.util.simulate.logging:Device"
+"util.simulate.manual_operators" = "metro.devices.util.simulate.manual_operators:Device"
+"util.simulate.point_pos" = "metro.devices.util.simulate.point_pos:Device"
+"util.simulate.random_vector" = "metro.devices.util.simulate.random_vector:Device"
+"util.simulate.scalar_abstract" = "metro.devices.util.simulate.scalar_abstract:Device"
+"util.simulate.scalar_manual" = "metro.devices.util.simulate.scalar_manual:Device"
+"util.simulate.simple_detector" = "metro.devices.util.simulate.simple_detector:Device"
+"util.simulate.static_waveform" = "metro.devices.util.simulate.static_waveform:Device"
+"util.simulate.vbeamline" = "metro.devices.util.simulate.vbeamline:Device"
+"util.simulate.vdetector_abstract" = "metro.devices.util.simulate.vdetector_abstract:Device"
+"util.simulate.vdetector_manual" = "metro.devices.util.simulate.vdetector_manual:Device"
+
+[project.entry-points."metro.display_device"]
+"display.fast_plot" = "devices.display.fast_plot:Device"
+"display.hist1d" = "devices.display.hist1d:Device"
+"display.hist2d" = "devices.display.hist2d:Device"
+"display.image" = "devices.display.image:Device"
+"display.plot" = "devices.display.plot:Device"
+"display.plot_xy" = "devices.display.plot_xy:Device"
+"display.polar_plot" = "devices.display.polar_plot:Device"
+"display.sorted" = "devices.display.sorted:Device"
+"display.value" = "devices.display.value:Device"
+"display.waveform" = "devices.display.waveform:Device"
+
+[tool.setuptools.packages.find]
+where = ["src"]
