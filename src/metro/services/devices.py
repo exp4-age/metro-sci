@@ -1,4 +1,3 @@
-
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -14,13 +13,15 @@
 
 from collections import namedtuple
 from functools import partial
-from pkg_resources import iter_entry_points
+import importlib.resources
+from importlib.metadata import entry_points
 from typing import Optional
 
 import metro
 from metro.services import channels
 
 from metro.services import logger
+
 log = logger.log(__name__)
 
 QtCore = metro.QtCore
@@ -28,14 +29,14 @@ QtWidgets = metro.QtWidgets
 QtUic = metro.QtUic
 
 
-_device_entry_points = {ep.name: ep for ep
-                        in iter_entry_points('metro.device')}
+_device_entry_points = {ep.name: ep for ep in entry_points(group="metro.device")}
 
 _devices = {}
 _morgue = []
 
-MeasureOperators = namedtuple('MeasureOperators',
-                              ['point', 'scan', 'trigger', 'limit', 'status'])
+MeasureOperators = namedtuple(
+    "MeasureOperators", ["point", "scan", "trigger", "limit", "status"]
+)
 _operators = MeasureOperators({}, {}, {}, {}, {})
 
 _unconfirmed_kills_counter = 0
@@ -56,7 +57,7 @@ def load(ep_name):
         ep = _device_entry_points[ep_name]
         cls = ep.load()
     except KeyError:
-        raise ValueError('unknown device entry point') from None
+        raise ValueError("unknown device entry point") from None
 
     return cls
 
@@ -87,7 +88,7 @@ def create(entry_point, name, parent=None, args=None, state=None):
     """
 
     if parent is not None:
-        name = '{0}!{1}'.format(parent._name, name)
+        name = "{0}!{1}".format(parent._name, name)
 
     if name in _devices:
         raise ValueError('device with name "{0}" exists already'.format(name))
@@ -108,8 +109,7 @@ def create(entry_point, name, parent=None, args=None, state=None):
         try:
             final_value = args[arg_name]
         except (KeyError, TypeError):
-            if (isinstance(default_value, list) or
-                    isinstance(default_value, tuple)):
+            if isinstance(default_value, list) or isinstance(default_value, tuple):
                 final_value = default_value[0]
             elif isinstance(default_value, metro.AbstractArgument):
                 final_value = default_value.dialog_bypass()
@@ -124,12 +124,12 @@ def create(entry_point, name, parent=None, args=None, state=None):
             final_args[k] = v
 
     if state is None:
-        state = {'visible': True}
+        state = {"visible": True}
 
     dev = device_class()
 
     if not dev._prepare(name, parent, final_args, state, entry_point):
-        raise RuntimeError('device preparation failed')
+        raise RuntimeError("device preparation failed")
 
     if parent is not None:
         parent._child_count += 1
@@ -158,8 +158,7 @@ def killAll():
 
 def checkForLeaks():
     for title in _morgue:
-        print('WARNING: leak detected of device',
-              title[:-len(metro.WINDOW_TITLE)-3])
+        print("WARNING: leak detected of device", title[: -len(metro.WINDOW_TITLE) - 3])
 
 
 def get(name):
@@ -210,19 +209,19 @@ def getAvailableName(name):
 
     i = 1
 
-    while '{0}_{1}'.format(name, i) in _devices:
+    while "{0}_{1}".format(name, i) in _devices:
         i = i + 1
 
-    return '{0}_{1}'.format(name, i)
+    return "{0}_{1}".format(name, i)
 
 
 def getDefaultName(entry_point):
-    return getAvailableName(entry_point[entry_point.rfind('.')+1:])
+    return getAvailableName(entry_point[entry_point.rfind(".") + 1 :])
 
 
 def findDeviceForChannel(channel_name):
     try:
-        device_name, channel_tag = channel_name.rsplit('#', maxsplit=1)
+        device_name, channel_tag = channel_name.rsplit("#", maxsplit=1)
         device = get(device_name)
     except ValueError:
         # May be thrown by rsplit
@@ -366,7 +365,7 @@ class GenericDevice(metro.measure.Node):
         metro.app.deviceCreated(self)
 
         try:
-            custom_state = state['custom']
+            custom_state = state["custom"]
         except KeyError:
             custom_state = None
 
@@ -390,8 +389,8 @@ class GenericDevice(metro.measure.Node):
 
         # for correct/full initialization set as visible first
         self.setVisible(True)
-        if 'visible' in state:
-            self.setVisible(state['visible'])
+        if "visible" in state:
+            self.setVisible(state["visible"])
 
         return True
 
@@ -406,8 +405,8 @@ class GenericDevice(metro.measure.Node):
             state: A dict the state should be saved into.
         """
 
-        state['entry_point'] = self._entry_point
-        state['arguments'] = self._args.copy()
+        state["entry_point"] = self._entry_point
+        state["arguments"] = self._args.copy()
 
         try:
             raw_arguments = self.__class__.arguments
@@ -421,16 +420,16 @@ class GenericDevice(metro.measure.Node):
                 try:
                     serialized_value = value.serialize(self._args[key])
                 except Exception:
-                    state['arguments'][key] = None
+                    state["arguments"][key] = None
                 else:
-                    state['arguments'][key] = serialized_value
+                    state["arguments"][key] = serialized_value
 
-        state['visible'] = self.isVisible()
+        state["visible"] = self.isVisible()
 
         custom_state = self.serialize()
 
         if custom_state is not None:
-            state['custom'] = custom_state
+            state["custom"] = custom_state
 
     def __str__(self):
         return self._name
@@ -453,8 +452,9 @@ class GenericDevice(metro.measure.Node):
                     children.append(_devices[name])
 
             if self._child_count != len(children):
-                print('WARNING: Killing device with child_count = {0}, but '
-                      'found {1}').format(self._child_count, len(children))
+                print(
+                    "WARNING: Killing device with child_count = {0}, but found {1}"
+                ).format(self._child_count, len(children))
 
             for child in children:
                 child.kill()
@@ -474,12 +474,12 @@ class GenericDevice(metro.measure.Node):
 
             for op in ops:
                 self.measure_removeOperator(*op)
-                print('WARNING: Removed operator automatically:', op[1])
+                print("WARNING: Removed operator automatically:", op[1])
 
         try:
             if self.measurement_control_override:
                 self.measure_releaseControl()
-                print('WARNING: Released measurement control automatically')
+                print("WARNING: Released measurement control automatically")
         except AttributeError:
             pass
 
@@ -552,11 +552,10 @@ class GenericDevice(metro.measure.Node):
             Same as create(entry_point, name, parent=self, ...)
         """
 
-        return create(entry_point, name, parent=self,
-                      args=args, state=state)
+        return create(entry_point, name, parent=self, args=args, state=state)
 
     def measure_setIndicator(self, key, value):
-        metro.app.setIndicator('d.{0}.{1}'.format(self._name, key), value)
+        metro.app.setIndicator("d.{0}.{1}".format(self._name, key), value)
 
     def measure_getCurrent(self) -> Optional[metro.Measurement]:
         return metro.app.current_meas
@@ -580,7 +579,7 @@ class GenericDevice(metro.measure.Node):
         """
 
         if not self.measurement_control_override:
-            raise RuntimeError('device has not overriden measurement control')
+            raise RuntimeError("device has not overriden measurement control")
 
         metro.app.current_meas = meas
 
@@ -590,8 +589,9 @@ class GenericDevice(metro.measure.Node):
 
         return None
 
-    def measure_connect(self, started=None, stopped=None, prepared=None,
-                        finalized=None):
+    def measure_connect(
+        self, started=None, stopped=None, prepared=None, finalized=None
+    ):
         """
         Connect (actually register) measuring slots for this device.
 
@@ -632,11 +632,11 @@ class GenericDevice(metro.measure.Node):
         Add a measurement operator.
         """
 
-        name = '{0} ({1})'.format(tag, self._name)
+        name = "{0} ({1})".format(tag, self._name)
         op_dict = getattr(_operators, type_)
 
         if name in op_dict:
-            raise ValueError('operator tag already in use for this device.')
+            raise ValueError("operator tag already in use for this device.")
 
         op_dict[name] = op
         self._operators.append((type_, tag))
@@ -662,40 +662,37 @@ class GenericDevice(metro.measure.Node):
             tag:
             op:
         """
-        if type_ == 'point':
+        if type_ == "point":
             proxy_op = metro.PointOperator()
-        elif type_ == 'scan':
+        elif type_ == "scan":
             proxy_op = metro.ScanOperator()
-        elif type_ == 'trigger':
+        elif type_ == "trigger":
             proxy_op = metro.TriggerOperator()
-        elif type_ == 'limit':
+        elif type_ == "limit":
             proxy_op = metro.LimitOperator()
-        elif type_ == 'status':
+        elif type_ == "status":
             proxy_op = metro.StatusOperator
         else:
-            raise ValueError('unknown operator type specified')
+            raise ValueError("unknown operator type specified")
 
-        prepare_method = 'prepare{0}'.format(type_.title())
-        finalize_method = 'finalize{0}'.format(type_.title())
+        prepare_method = "prepare{0}".format(type_.title())
+        finalize_method = "finalize{0}".format(type_.title())
 
-        if type_ == 'point':
-            prepare_method += 's'
-            finalize_method += 's'
+        if type_ == "point":
+            prepare_method += "s"
+            finalize_method += "s"
 
-        setattr(proxy_op, prepare_method,
-                partial(getattr(op, prepare_method), tag))
-        setattr(proxy_op, finalize_method,
-                partial(getattr(op, finalize_method), tag))
+        setattr(proxy_op, prepare_method, partial(getattr(op, prepare_method), tag))
+        setattr(proxy_op, finalize_method, partial(getattr(op, finalize_method), tag))
 
         self.measure_addOperator(type_, tag, proxy_op)
 
     def measure_removeOperator(self, type_, tag):
-        name = '{0} ({1})'.format(tag, self._name)
+        name = "{0} ({1})".format(tag, self._name)
         op_dict = getattr(_operators, type_)
 
         if name not in op_dict:
-            raise ValueError('no operator with this tag in use for this '
-                             'device')
+            raise ValueError("no operator with this tag in use for this device")
 
         self._operators.remove((type_, tag))
         del op_dict[name]
@@ -715,18 +712,35 @@ class GenericDevice(metro.measure.Node):
 
         self.measurement_control_override = False
 
-    def measure_create(self, point_op, scan_op, trigger_op, limit_op,
-                       status_op=None, scan_count=1, storage_base=None):
-        cur_channels = [chan for chan
-                        in channels.sortByDependency(channels.getAll())
-                        if not chan.isStatic()]
+    def measure_create(
+        self,
+        point_op,
+        scan_op,
+        trigger_op,
+        limit_op,
+        status_op=None,
+        scan_count=1,
+        storage_base=None,
+    ):
+        cur_channels = [
+            chan
+            for chan in channels.sortByDependency(channels.getAll())
+            if not chan.isStatic()
+        ]
 
         if status_op is None:
             status_op = metro.app.main_window
 
         return metro.Measurement(
-            list(getAll()), cur_channels, point_op, scan_op, trigger_op,
-            limit_op, status_op, scan_count, storage_base
+            list(getAll()),
+            cur_channels,
+            point_op,
+            scan_op,
+            trigger_op,
+            limit_op,
+            status_op,
+            scan_count,
+            storage_base,
         )
 
     def connectToMeasurement(self, prepared, started, stopped, finalized):
@@ -759,8 +773,10 @@ class GenericDevice(metro.measure.Node):
         """
 
         metro.app.showError(
-            'An error has occured in device <i>{0}</i>:'.format(self._name),
-            text, details, log
+            "An error has occured in device <i>{0}</i>:".format(self._name),
+            text,
+            details,
+            log,
         )
 
     def showException(self, e, log=log):
@@ -852,14 +868,15 @@ def _searchParentUi(cls):
     """
 
     for parent in cls.__bases__:
-        if parent.__name__ == 'Device':
+        if parent.__name__ == "Device":
             resource_args = (
                 parent.__module__,
-                parent.__module__[parent.__module__.rfind('.')+1:] + '.ui'
+                parent.__module__[parent.__module__.rfind(".") + 1 :] + ".ui",
             )
 
-            if metro.resource_exists(*resource_args):
-                return metro.resource_filename(*resource_args)
+            if importlib.resources.is_resource(*resource_args):
+                with importlib.resources.path(*resource_args) as fspath:
+                    return fspath
             else:
                 return _searchParentUi(parent)
 
@@ -943,11 +960,14 @@ class WidgetDevice(GenericDevice, QtWidgets.QWidget):
         try:
             ui_file = self.ui_file
         except AttributeError:
-            res_args = (self.__module__,
-                        f'{self.__module__[self.__module__.rfind(".")+1:]}.ui')
+            res_args = (
+                self.__module__,
+                f"{self.__module__[self.__module__.rfind('.') + 1 :]}.ui",
+            )
 
-            if metro.resource_exists(*res_args):
-                ui_file = metro.resource_filename(*res_args)
+            if importlib.resources.is_resource(*res_args):
+                with importlib.resources.path(*res_args) as fspath:
+                    ui_file = fspath
             else:
                 ui_file = _searchParentUi(self.__class__)
 
@@ -960,8 +980,8 @@ class WidgetDevice(GenericDevice, QtWidgets.QWidget):
 
         self.setWindowTitle(name)
 
-        if 'geometry' in state and state['geometry'] is not None:
-            self.setGeometry(*state['geometry'])
+        if "geometry" in state and state["geometry"] is not None:
+            self.setGeometry(*state["geometry"])
 
         # Now we call _prepare() on our superclass. We delayed this first
         # so the UI is already initialized by the time we call prepare()
@@ -983,8 +1003,12 @@ class WidgetDevice(GenericDevice, QtWidgets.QWidget):
 
         geometry = self.geometry()
 
-        state['geometry'] = (geometry.left(), geometry.top(),
-                             geometry.width(), geometry.height())
+        state["geometry"] = (
+            geometry.left(),
+            geometry.top(),
+            geometry.width(),
+            geometry.height(),
+        )
 
         super()._serialize(state)
 
@@ -1001,7 +1025,7 @@ class WidgetDevice(GenericDevice, QtWidgets.QWidget):
         # This flag is set by closeEvent() if the unload process was
         # initiated by Qt. In this case we do not want to propagate it
         # again.
-        if not hasattr(self, 'close_signaled'):
+        if not hasattr(self, "close_signaled"):
             self.kill_called = True
             self.close()
 
@@ -1079,7 +1103,7 @@ class WidgetDevice(GenericDevice, QtWidgets.QWidget):
             # This flag is set if close() was called starting from
             # kill(), so in this case we do not want to set the
             # kill chain in motion ourselves again
-            if not hasattr(self, 'kill_called'):
+            if not hasattr(self, "kill_called"):
                 self.close_signaled = True
 
                 # This delayed kill fixes the weird SEGFAULTs occuring
@@ -1103,14 +1127,14 @@ class WidgetDevice(GenericDevice, QtWidgets.QWidget):
         self.activateWindow()
 
     def setWindowTitle(self, new_title):
-        super().setWindowTitle(f'{new_title} - {metro.WINDOW_TITLE}')
+        super().setWindowTitle(f"{new_title} - {metro.WINDOW_TITLE}")
 
     def createDialog(self, ui_name):
         dialog = QtWidgets.QDialog(self)
 
         ui_file = metro.resource_filename(
             self.__module__,
-            f'{self.__module__[self.__module__.rfind(".")+1:]}_{ui_name}.ui'
+            f"{self.__module__[self.__module__.rfind('.') + 1 :]}_{ui_name}.ui",
         )
 
         QtUic.loadUi(ui_file, dialog)
@@ -1125,7 +1149,7 @@ class WidgetDevice(GenericDevice, QtWidgets.QWidget):
 class DeviceGroup(object):
     def __init__(self):
         if not isinstance(self, QtWidgets.QWidget):
-            raise RuntimeError('DeviceGroup must be extended by a QWidget')
+            raise RuntimeError("DeviceGroup must be extended by a QWidget")
 
         self.menuAdd = QtWidgets.QMenu()
         self.menuAdd.aboutToShow.connect(self.on_menuAdd_aboutToShow)
@@ -1133,17 +1157,18 @@ class DeviceGroup(object):
 
         self.buttonAdd = QtWidgets.QToolButton(self)
         self.buttonAdd.setPopupMode(QtWidgets.QToolButton.InstantPopup)
-        self.buttonAdd.setStyleSheet('QToolButton::menu-indicator '
-                                     '{ image: url(none.jpg); }')
+        self.buttonAdd.setStyleSheet(
+            "QToolButton::menu-indicator { image: url(none.jpg); }"
+        )
         self.buttonAdd.setMenu(self.menuAdd)
-        self.buttonAdd.setIcon(self.style().standardIcon(
-            QtWidgets.QStyle.SP_FileDialogNewFolder
-        ))
+        self.buttonAdd.setIcon(
+            self.style().standardIcon(QtWidgets.QStyle.SP_FileDialogNewFolder)
+        )
 
         self.show()
 
     def _getContainedDevices(self):
-        raise NotImplementedError('_getContainedDevices')
+        raise NotImplementedError("_getContainedDevices")
 
     @metro.QSlot()
     def on_menuAdd_aboutToShow(self):
@@ -1175,8 +1200,7 @@ class DeviceGroup(object):
     def dumpGeometry(self):
         geometry = self.geometry()
 
-        return (geometry.left(), geometry.top(),
-                geometry.width(), geometry.height())
+        return (geometry.left(), geometry.top(), geometry.width(), geometry.height())
 
     def restoreGeometry_(self, state):
         # TODO: collides with Qt5 symbol
@@ -1190,7 +1214,7 @@ class WindowGroupWidget(QtWidgets.QMdiArea, DeviceGroup):
     def __init__(self, title):
         super().__init__()
 
-        self.setWindowTitle(f'{title} - {metro.WINDOW_TITLE}')
+        self.setWindowTitle(f"{title} - {metro.WINDOW_TITLE}")
 
         self.devices_in_window = []
 
@@ -1199,7 +1223,7 @@ class WindowGroupWidget(QtWidgets.QMdiArea, DeviceGroup):
 
     def addDevice(self, d):
         if not isinstance(d, QtWidgets.QWidget):
-            raise TypeError('device must inherit QWidget')
+            raise TypeError("device must inherit QWidget")
 
         self.addSubWindow(d)
         d.show()
@@ -1213,31 +1237,39 @@ class TabGroupWidget(QtWidgets.QTabWidget, DeviceGroup):
             layout = QtWidgets.QHBoxLayout(self)
             self.setLayout(layout)
 
-            layout.addItem(QtWidgets.QSpacerItem(
-                1, 1, QtWidgets.QSizePolicy.MinimumExpanding,
-                QtWidgets.QSizePolicy.Expanding
-            ))
+            layout.addItem(
+                QtWidgets.QSpacerItem(
+                    1,
+                    1,
+                    QtWidgets.QSizePolicy.MinimumExpanding,
+                    QtWidgets.QSizePolicy.Expanding,
+                )
+            )
 
             self.label = QtWidgets.QLabel(
-                'A tab group can contain any number of devices and each added '
-                'device is then accessible by its own tab.<br><br>A device '
-                'can be added by clicking the small button in the top right '
-                'corner of this window.<br><br>Some devices also provide '
-                'their own method of adding it to a device group, e.g. most '
-                'display devices.'
+                "A tab group can contain any number of devices and each added "
+                "device is then accessible by its own tab.<br><br>A device "
+                "can be added by clicking the small button in the top right "
+                "corner of this window.<br><br>Some devices also provide "
+                "their own method of adding it to a device group, e.g. most "
+                "display devices."
             )
             self.label.setWordWrap(True)
             layout.addWidget(self.label)
 
-            layout.addItem(QtWidgets.QSpacerItem(
-                1, 1, QtWidgets.QSizePolicy.MinimumExpanding,
-                QtWidgets.QSizePolicy.Expanding
-            ))
+            layout.addItem(
+                QtWidgets.QSpacerItem(
+                    1,
+                    1,
+                    QtWidgets.QSizePolicy.MinimumExpanding,
+                    QtWidgets.QSizePolicy.Expanding,
+                )
+            )
 
     def __init__(self, title, state=None):
         super().__init__()
 
-        self.setWindowTitle(f'{title} - {metro.WINDOW_TITLE}')
+        self.setWindowTitle(f"{title} - {metro.WINDOW_TITLE}")
 
         self.tabCloseRequested.connect(self.on_tabCloseRequested)
         self.setTabsClosable(False)
@@ -1245,7 +1277,7 @@ class TabGroupWidget(QtWidgets.QTabWidget, DeviceGroup):
         self.setCornerWidget(self.buttonAdd, QtCore.Qt.TopRightCorner)
 
         self.tabEmpty = TabGroupWidget.EmptyTabWidget(self)
-        self.addTab(self.tabEmpty, '')
+        self.addTab(self.tabEmpty, "")
 
         self.devices_in_tabs = []
 
@@ -1272,15 +1304,14 @@ class TabGroupWidget(QtWidgets.QTabWidget, DeviceGroup):
 
         # Compute the extra geometry added by the QTabWidget
         own_size = self.size()
-        tab0_size = (self.widget(0).size() if self.count() > 0
-                     else QtCore.QSize(0, 0))
+        tab0_size = self.widget(0).size() if self.count() > 0 else QtCore.QSize(0, 0)
 
         self.extra_height = own_size.height() - tab0_size.height()
         self.extra_width = own_size.width() - tab0_size.width()
 
     def addDevice(self, d):
         if not isinstance(d, QtWidgets.QWidget):
-            raise TypeError('device must inherit QWidget')
+            raise TypeError("device must inherit QWidget")
 
         d._TabGroupWidget_orig_geometry = d.geometry()
         d._TabGroupWidget_orig_visible = d.isVisible()
@@ -1326,7 +1357,7 @@ class TabGroupWidget(QtWidgets.QTabWidget, DeviceGroup):
 
         if self.count() == 0:
             self.setTabsClosable(False)
-            self.addTab(self.tabEmpty, '')
+            self.addTab(self.tabEmpty, "")
             self.resize(self.sizeHint())
 
     @metro.QSlot(int)

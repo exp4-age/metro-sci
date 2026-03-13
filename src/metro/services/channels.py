@@ -1,4 +1,3 @@
-
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -23,9 +22,8 @@ import functools
 import multiprocessing
 import traceback
 from time import time as time_now
-from typing import Any, Callable, Iterable, List, Mapping, Union, Tuple, \
-    Sequence
-from typing.io import IO
+from typing import Any, Callable, Iterable, List, Mapping, Union, Tuple, Sequence
+from typing import IO
 
 import numpy
 import h5py
@@ -35,7 +33,7 @@ _channels = {}
 _watchers = {}
 
 
-def get(name: str) -> 'AbstractChannel':
+def get(name: str) -> "AbstractChannel":
     """Get a channel by name.
 
     Args:
@@ -51,7 +49,7 @@ def get(name: str) -> 'AbstractChannel':
     return _channels[name]
 
 
-def getAll() -> Iterable['AbstractChannel']:
+def getAll() -> Iterable["AbstractChannel"]:
     """Get all current channels.
 
     Returns:
@@ -61,8 +59,9 @@ def getAll() -> Iterable['AbstractChannel']:
     return _channels.values()
 
 
-def sortByDependency(all_channels: Iterable['AbstractChannel']
-                     ) -> List['AbstractChannel']:
+def sortByDependency(
+    all_channels: Iterable["AbstractChannel"],
+) -> List["AbstractChannel"]:
     """Sort a channel list by its dependencies.
 
     Some channels may depend on other channels, such as a channel in
@@ -138,7 +137,7 @@ def sortByDependency(all_channels: Iterable['AbstractChannel']
         # If this flag is still false, we did not emit a single channel
         # and therefore had unsatisfiable dependencies (cycles).
         if not emitted:
-            raise RuntimeError('circular channel dependency detected')
+            raise RuntimeError("circular channel dependency detected")
 
         # Switch our graph to all remaining channels.
         # This operation is equivalent of removing channels from our
@@ -149,10 +148,12 @@ def sortByDependency(all_channels: Iterable['AbstractChannel']
     return final_channels
 
 
-def query(hint: Union[int, str, None] = None,
-          freq: Union[int, str, None] = None,
-          type_: Union[type, None] = None,
-          shape: Union[int, None] = None) -> List['AbstractChannel']:
+def query(
+    hint: Union[int, str, None] = None,
+    freq: Union[int, str, None] = None,
+    type_: Union[type, None] = None,
+    shape: Union[int, None] = None,
+) -> List["AbstractChannel"]:
     """Query channels with certain parameters.
 
     The query can be limited to a certain hint, freq or type.
@@ -211,13 +212,15 @@ def query(hint: Union[int, str, None] = None,
     return res
 
 
-def watch(watcher: object,
-          hint: Union[int, str, None] = None,
-          freq: Union[int, str, None] = None,
-          type_: Union[type, None] = None,
-          shape: Union[int, None] = None,
-          channel: Union['AbstractChannel', None] = None,
-          callbacks: Union[List[str], None] = None) -> None:
+def watch(
+    watcher: object,
+    hint: Union[int, str, None] = None,
+    freq: Union[int, str, None] = None,
+    type_: Union[type, None] = None,
+    shape: Union[int, None] = None,
+    channel: Union["AbstractChannel", None] = None,
+    callbacks: Union[List[str], None] = None,
+) -> None:
     """Watch the channel list for certain parameters.
 
     A watcher is notified whenever a channel is opened or closed. A
@@ -459,7 +462,7 @@ class AbstractChannel(object):
                 measurements and do not change their data contents.
         """
 
-        name = '#'.join([str(x) for x in names])
+        name = "#".join([str(x) for x in names])
 
         if name in _channels:
             raise ValueError('name "{0}" already in use'.format(name))
@@ -475,26 +478,26 @@ class AbstractChannel(object):
         self.mode = AbstractChannel.DIRECT_MODE
 
         try:
-            self.setHint(options['hint'])
+            self.setHint(options["hint"])
         except KeyError:
             self.hint = AbstractChannel.WAVEFORM_HINT
 
         try:
-            self.setFrequency(options['freq'])
+            self.setFrequency(options["freq"])
         except KeyError:
             self.freq = AbstractChannel.CONTINUOUS_SAMPLES
 
         try:
-            self.static = bool(options['static'])
+            self.static = bool(options["static"])
         except KeyError:
             self.static = False
 
         _channels[self.name] = self
 
-        self._notify('channelOpened')
+        self._notify("channelOpened")
 
     def __str__(self) -> None:
-        return '{0}({1})'.format(self.__class__.__name__, self.name)
+        return "{0}({1})".format(self.__class__.__name__, self.name)
 
     # PRIVATE METHODS
     def _notify(self, callback: str) -> None:
@@ -547,8 +550,10 @@ class AbstractChannel(object):
         try:
             value = self.kernel(d)
         except Exception as e:
-            print('An unechecked exception was raised in the computing '
-                  'kernel of {0}:'.format(self.name))
+            print(
+                "An unechecked exception was raised in the computing "
+                "kernel of {0}:".format(self.name)
+            )
 
             traceback.print_exception(type(e), e, e.__traceback__)
         else:
@@ -569,8 +574,10 @@ class AbstractChannel(object):
             try:
                 value = self.kernel(*self.input_stack)
             except Exception as e:
-                print('An unechecked exception was raised in the computing '
-                      'kernel of {0}:'.format(self.name))
+                print(
+                    "An unechecked exception was raised in the computing "
+                    "kernel of {0}:".format(self.name)
+                )
 
                 traceback.print_exception(type(e), e, e.__traceback__)
             else:
@@ -604,7 +611,7 @@ class AbstractChannel(object):
         self.input_channels = None
 
     # PUBLIC IMPLEMENTATION API
-    def dependsOn(self, channel: 'AbstractChannel') -> bool:
+    def dependsOn(self, channel: "AbstractChannel") -> bool:
         """Check for dependance on other channel.
 
         A channel might depend on another channel such as in computing
@@ -695,8 +702,10 @@ class AbstractChannel(object):
                 try:
                     value = self.kernel(*stack)
                 except Exception as e:
-                    print('An unechecked exception was raised in the '
-                          'integrating kernel of {0}:'.format(self.name))
+                    print(
+                        "An unechecked exception was raised in the "
+                        "integrating kernel of {0}:".format(self.name)
+                    )
 
                     traceback.print_exception(type(e), e, e.__traceback__)
                 else:
@@ -740,7 +749,7 @@ class AbstractChannel(object):
         contents and not other properties like mode or freqeuency.
         """
 
-        raise NotImplementedError('reset')
+        raise NotImplementedError("reset")
 
     def isEmpty(self) -> bool:
         """Check if the active step is empty.
@@ -749,7 +758,7 @@ class AbstractChannel(object):
         subclass.
         """
 
-        raise NotImplementedError('isEmpty')
+        raise NotImplementedError("isEmpty")
 
     def getStepCount(self) -> int:
         """Get the number of steps in this channel's buffers.
@@ -762,11 +771,11 @@ class AbstractChannel(object):
         measurement.
         """
 
-        raise NotImplementedError('getStepCount')
+        raise NotImplementedError("getStepCount")
 
     # PUBLIC USER API
     @staticmethod
-    def getByName(name: str) -> 'AbstractChannel':
+    def getByName(name: str) -> "AbstractChannel":
         """Get the object of a channel by its name.
 
         A shortcut for the get() function in this module.
@@ -812,15 +821,15 @@ class AbstractChannel(object):
         """
 
         if mode_id == AbstractChannel.DIRECT_MODE:
-            mode_str = 'direct'
+            mode_str = "direct"
         elif mode_id == AbstractChannel.REMOTE_MODE:
-            mode_str = 'remote'
+            mode_str = "remote"
         elif mode_id == AbstractChannel.COMPUTING_MODE:
-            mode_str = 'computing'
+            mode_str = "computing"
         elif mode_id == AbstractChannel.INTEGRATING_MODE:
-            mode_str = 'integrating'
+            mode_str = "integrating"
         else:
-            raise ValueError('unknown mode constant {0}'.format(mode_id))
+            raise ValueError("unknown mode constant {0}".format(mode_id))
 
         return mode_str
 
@@ -838,15 +847,15 @@ class AbstractChannel(object):
 
         hint_str = hint_str.strip().lower()
 
-        if hint_str == 'unknown':
+        if hint_str == "unknown":
             hint = AbstractChannel.UNKNOWN_HINT
-        elif hint_str == 'arbitrary':
+        elif hint_str == "arbitrary":
             hint = AbstractChannel.ARBITRARY_HINT
-        elif hint_str == 'indicator':
+        elif hint_str == "indicator":
             hint = AbstractChannel.INDICATOR_HINT
-        elif hint_str == 'waveform':
+        elif hint_str == "waveform":
             hint = AbstractChannel.WAVEFORM_HINT
-        elif hint_str == 'histogram':
+        elif hint_str == "histogram":
             hint = AbstractChannel.HISTOGRAM_HINT
         else:
             raise ValueError('unknown hint string "{0}"'.format(hint_str))
@@ -865,17 +874,17 @@ class AbstractChannel(object):
         """
 
         if hint_id == AbstractChannel.UNKNOWN_HINT:
-            hint_str = 'unknown'
+            hint_str = "unknown"
         elif hint_id == AbstractChannel.ARBITRARY_HINT:
-            hint_str = 'arbitrary'
+            hint_str = "arbitrary"
         elif hint_id == AbstractChannel.INDICATOR_HINT:
-            hint_str = 'indicator'
+            hint_str = "indicator"
         elif hint_id == AbstractChannel.WAVEFORM_HINT:
-            hint_str = 'waveform'
+            hint_str = "waveform"
         elif hint_id == AbstractChannel.HISTOGRAM_HINT:
-            hint_str = 'histogram'
+            hint_str = "histogram"
         else:
-            raise ValueError('unknown hint constant {0}'.format(hint_id))
+            raise ValueError("unknown hint constant {0}".format(hint_id))
 
         return hint_str
 
@@ -893,11 +902,11 @@ class AbstractChannel(object):
 
         freq_str = freq_str.strip().lower()
 
-        if freq_str == 'continuous' or freq_str == 'cont':
+        if freq_str == "continuous" or freq_str == "cont":
             freq = AbstractChannel.CONTINUOUS_SAMPLES
-        elif freq_str == 'step':
+        elif freq_str == "step":
             freq = AbstractChannel.STEP_SAMPLES
-        elif freq_str == 'scheduled':
+        elif freq_str == "scheduled":
             freq = AbstractChannel.SCHEDULED_SAMPLES
         else:
             raise ValueError('unknown frequency string "{0}"'.format(freq_str))
@@ -916,13 +925,13 @@ class AbstractChannel(object):
         """
 
         if freq_id == AbstractChannel.CONTINUOUS_SAMPLES:
-            freq_str = 'continuous'
+            freq_str = "continuous"
         elif freq_id == AbstractChannel.STEP_SAMPLES:
-            freq_str = 'step'
+            freq_str = "step"
         elif freq_id == AbstractChannel.SCHEDULED_SAMPLES:
-            freq_str = 'scheduled'
+            freq_str = "scheduled"
         else:
-            raise ValueError('unknown frequency constant {0}'.format(freq_id))
+            raise ValueError("unknown frequency constant {0}".format(freq_id))
 
         return freq_str
 
@@ -936,13 +945,13 @@ class AbstractChannel(object):
         """
 
         if self.name not in _channels:
-            raise RuntimeError('channel is closed')
+            raise RuntimeError("channel is closed")
 
         self.subscribers.append(obj)
 
         obj._channel_subscriber_step_index = AbstractChannel.CURRENT_STEP
 
-        self._notify('subscriberAdded')
+        self._notify("subscriberAdded")
 
     def getSubscribedStep(self, obj: Subscriber) -> int:
         """
@@ -983,7 +992,7 @@ class AbstractChannel(object):
 
         self.subscribers.remove(obj)
 
-        self._notify('subscriberRemoved')
+        self._notify("subscriberRemoved")
 
     def hintDisplayArgument(self, key: str, value: Any) -> None:
         """Suggest a non-default value for arguments of display devices.
@@ -1021,7 +1030,7 @@ class AbstractChannel(object):
         """
 
         if self.locked:
-            raise RuntimeError('channel is locked')
+            raise RuntimeError("channel is locked")
 
         if self.mode == AbstractChannel.DIRECT_MODE:
             return
@@ -1036,8 +1045,9 @@ class AbstractChannel(object):
 
         return self
 
-    def setComputing(self, kernel: Callable,
-                     input_channels: Sequence['AbstractChannel']) -> None:
+    def setComputing(
+        self, kernel: Callable, input_channels: Sequence["AbstractChannel"]
+    ) -> None:
         """Change this channel to computing mode.
 
         This method may not be called during a measurement.
@@ -1061,7 +1071,7 @@ class AbstractChannel(object):
         """
 
         if self.locked:
-            raise RuntimeError('channel is locked')
+            raise RuntimeError("channel is locked")
 
         if self.mode == AbstractChannel.COMPUTING_MODE:
             return
@@ -1112,8 +1122,9 @@ class AbstractChannel(object):
 
         return self
 
-    def setIntegrating(self, kernel: Callable,
-                       input_channels: Sequence['AbstractChannel']) -> None:
+    def setIntegrating(
+        self, kernel: Callable, input_channels: Sequence["AbstractChannel"]
+    ) -> None:
         """Change this channel to integrating mode.
 
         This method may not be called during a measurement.
@@ -1130,7 +1141,7 @@ class AbstractChannel(object):
         """
 
         if self.locked:
-            raise RuntimeError('channel is locked')
+            raise RuntimeError("channel is locked")
 
         if self.mode == AbstractChannel.INTEGRATING_MODE:
             return
@@ -1189,7 +1200,7 @@ class AbstractChannel(object):
         """
 
         if self.locked:
-            raise RuntimeError('channel is locked')
+            raise RuntimeError("channel is locked")
 
         if isinstance(new_freq, str):
             new_freq = AbstractChannel.getFrequencyConstant(new_freq)
@@ -1215,7 +1226,7 @@ class AbstractChannel(object):
         elif self.mode == AbstractChannel.INTEGRATING_MODE:
             self._stopIntegrating()
 
-        self._notify('channelClosed')
+        self._notify("channelClosed")
 
         del _channels[self.name]
 
@@ -1230,7 +1241,7 @@ class AbstractChannel(object):
             value: A string containing the tag value
         """
 
-        self.header_tags['X-' + tag] = value
+        self.header_tags["X-" + tag] = value
 
     def addMarker(self, text: str) -> None:
         """Write a custom marker.
@@ -1241,7 +1252,7 @@ class AbstractChannel(object):
 
         pass
 
-    def copyLayoutFrom(self, ch: 'AbstractChannel') -> None:
+    def copyLayoutFrom(self, ch: "AbstractChannel") -> None:
         """Copy step layout of another channel.
 
         The buffer layout requrements are replicated into this channel.
@@ -1258,7 +1269,7 @@ class AbstractChannel(object):
             ch: The channel object to copy the structure from
         """
 
-        raise NotImplementedError('copyLayoutFrom')
+        raise NotImplementedError("copyLayoutFrom")
 
     def dump(self, step: int = CURRENT_STEP, fp: IO = None) -> None:
         """Dump channel data.
@@ -1282,7 +1293,7 @@ class AbstractChannel(object):
             Requested channel data.
         """
 
-        raise NotImplementedError('getData')
+        raise NotImplementedError("getData")
 
     def setData(self, value: Any) -> None:
         """Set channel data.
@@ -1294,7 +1305,7 @@ class AbstractChannel(object):
             value: Data the current step of this channel is set to.
         """
 
-        raise NotImplementedError('setData')
+        raise NotImplementedError("setData")
 
     def addData(self, value: Any) -> None:
         """Add channel data.
@@ -1306,7 +1317,7 @@ class AbstractChannel(object):
             value: Data to be added to the current step of this channel.
         """
 
-        raise NotImplementedError('addData')
+        raise NotImplementedError("addData")
 
     def clearData(self) -> None:
         """Clear channel data.
@@ -1315,7 +1326,7 @@ class AbstractChannel(object):
         subclass.
         """
 
-        raise NotImplementedError('clearData')
+        raise NotImplementedError("clearData")
 
 
 class ChannelAdapter(AbstractChannel):
@@ -1408,12 +1419,12 @@ class StreamChannel(AbstractChannel):
         self.locked = False
 
         try:
-            self.buffering = bool(options['buffering'])
+            self.buffering = bool(options["buffering"])
         except KeyError:
             self.buffering = True
 
         try:
-            self.transient = bool(options['transient'])
+            self.transient = bool(options["transient"])
         except KeyError:
             self.transient = False
 
@@ -1421,7 +1432,7 @@ class StreamChannel(AbstractChannel):
         self.step_values = []
 
         try:
-            self.shape = int(options['shape'])
+            self.shape = int(options["shape"])
         except KeyError:
             self.shape = 0
 
@@ -1440,14 +1451,14 @@ class StreamChannel(AbstractChannel):
             self._compactData = self._compactData_vector
 
         else:
-            raise ValueError('shape must be non-negative integer value')
+            raise ValueError("shape must be non-negative integer value")
 
         self.range_min = None
         self.range_max = None
 
         super().__init__(*names, **options)
 
-        self.header_tags['Shape'] = self.shape
+        self.header_tags["Shape"] = self.shape
 
     # PRIVATE METHODS
     @staticmethod
@@ -1455,9 +1466,9 @@ class StreamChannel(AbstractChannel):
         """Write channel data to a file pointer."""
 
         if isinstance(d, numpy.ndarray):
-            numpy.savetxt(fp, d, delimiter='\t')
+            numpy.savetxt(fp, d, delimiter="\t")
         else:
-            fp.write('{0}\n'.format(d).encode('utf-8'))
+            fp.write("{0}\n".format(d).encode("utf-8"))
 
     @staticmethod
     def _compactData_scalar(data: Any) -> List[numpy.ndarray]:
@@ -1486,7 +1497,7 @@ class StreamChannel(AbstractChannel):
     def _writeData_vector(fp: IO, d: Any) -> None:
         """Write channel data to a file pointer."""
 
-        numpy.savetxt(fp, d, delimiter='\t')
+        numpy.savetxt(fp, d, delimiter="\t")
 
     @staticmethod
     def _compactData_vector(data: Any) -> None:
@@ -1498,10 +1509,12 @@ class StreamChannel(AbstractChannel):
     def _printException(e: Exception) -> None:
         """Pretty-print an exception."""
 
-        print('An exception was raised by a channel subscriber, which may '
-              'cause other subscribers of the same channel to miss this '
-              'callback. The data is still saved in the channel buffers (and '
-              'written to disk in storage mode.\nThe causing exception reads:')
+        print(
+            "An exception was raised by a channel subscriber, which may "
+            "cause other subscribers of the same channel to miss this "
+            "callback. The data is still saved in the channel buffers (and "
+            "written to disk in storage mode.\nThe causing exception reads:"
+        )
 
         traceback.print_exception(type(e), e, e.__traceback__)
 
@@ -1517,7 +1530,7 @@ class StreamChannel(AbstractChannel):
         except AttributeError:
             pass
         else:
-            fp.write('# {0}\n'.format(text).encode('ascii'))
+            fp.write("# {0}\n".format(text).encode("ascii"))
 
     # PUBLIC IMPLEMENTATION API
     def beginScan(self, scan_counter: int) -> None:
@@ -1525,7 +1538,7 @@ class StreamChannel(AbstractChannel):
 
         super().beginScan(scan_counter)
 
-        self.addMarker('SCAN {0}'.format(scan_counter))
+        self.addMarker("SCAN {0}".format(scan_counter))
 
         # Gets incremented by beginStep to 0
         self.current_index = -1
@@ -1550,26 +1563,25 @@ class StreamChannel(AbstractChannel):
         except IndexError:
             self.step_values.append(step_value)
 
-        if self.current_index > len(self.data)-1 and self.buffering:
+        if self.current_index > len(self.data) - 1 and self.buffering:
             self.data.append([])
 
         if self.freq == AbstractChannel.CONTINUOUS_SAMPLES:
-            self.addMarker('STEP {0}: {1}'.format(self.current_index,
-                                                  step_value))
+            self.addMarker("STEP {0}: {1}".format(self.current_index, step_value))
 
             for s in self.subscribers:
                 step_index = s._channel_subscriber_step_index
 
-                if (step_index == AbstractChannel.CURRENT_STEP
-                        or step_index == self.current_index):
-                    if (self.buffering and
-                            len(self.data[self.current_index]) > 0):
+                if (
+                    step_index == AbstractChannel.CURRENT_STEP
+                    or step_index == self.current_index
+                ):
+                    if self.buffering and len(self.data[self.current_index]) > 0:
                         s.dataSet(self.getData())
                     else:
                         s.dataCleared()
         elif self.freq == AbstractChannel.SCHEDULED_SAMPLES:
-            self.addMarker('STEP {0}: {1}'.format(self.current_index,
-                                                  step_value))
+            self.addMarker("STEP {0}: {1}".format(self.current_index, step_value))
 
     def endStep(self) -> None:
         """End a step."""
@@ -1586,7 +1598,7 @@ class StreamChannel(AbstractChannel):
         except AttributeError:
             pass
         except ValueError as e:
-            print('ValueError on flush of', self.name, e)
+            print("ValueError on flush of", self.name, e)
 
     def copyDataFrom(self, chan: AbstractChannel) -> None:
         """Copy the data from another into this channel.
@@ -1605,24 +1617,27 @@ class StreamChannel(AbstractChannel):
             return
 
         # If a file pointer exists, we are already storing
-        if hasattr(self, 'file_pointer'):
+        if hasattr(self, "file_pointer"):
             return
 
         # The file is opened in binary mode since apparently
         # numpy.savetxt operates on byte buffers instead of strings. We
         # therefore have to encode all our own strings ourselves!
-        fp = open('{0}_{1}.txt'.format(base_path, self.name), 'wb')
+        fp = open("{0}_{1}.txt".format(base_path, self.name), "wb")
 
-        fp.write('# Name: {0}\n# Hint: {1}\n# Frequency: {2}\n'.format(
-            self.name, self.getHintString(self.hint),
-            self.getFrequencyString(self.freq)
-        ).encode('ascii'))
+        fp.write(
+            "# Name: {0}\n# Hint: {1}\n# Frequency: {2}\n".format(
+                self.name,
+                self.getHintString(self.hint),
+                self.getFrequencyString(self.freq),
+            ).encode("ascii")
+        )
 
         for tag, value in self.header_tags.items():
-            fp.write('# {0}: {1}\n'.format(tag, value).encode('ascii'))
+            fp.write("# {0}: {1}\n".format(tag, value).encode("ascii"))
 
         for key, value in self.display_arguments.items():
-            fp.write('# DISPLAY {0}: {1}\n'.format(key, value).encode('ascii'))
+            fp.write("# DISPLAY {0}: {1}\n".format(key, value).encode("ascii"))
 
         self.file_pointer = fp
 
@@ -1721,16 +1736,16 @@ class StreamChannel(AbstractChannel):
                 self.data.append([])
 
     # PUBLIC USER API
-    def dump(self, step: int = AbstractChannel.CURRENT_STEP,
-             fp: IO = None) -> None:
+    def dump(self, step: int = AbstractChannel.CURRENT_STEP, fp: IO = None) -> None:
         """Dump channel data."""
 
         if fp is None:
             try:
                 fp = self.file_pointer
             except AttributeError:
-                raise ValueError('no file pointer supplied and channel is not '
-                                 'in storage mode')
+                raise ValueError(
+                    "no file pointer supplied and channel is not in storage mode"
+                )
 
         d = self.getData(step)
 
@@ -1743,8 +1758,7 @@ class StreamChannel(AbstractChannel):
     def setAccumulating(self, ch_input: AbstractChannel) -> None:
         self.setIntegrating(numpy.sum, [ch_input])
 
-    def getData(self, step_index: int = AbstractChannel.CURRENT_STEP
-                ) -> numpy.ndarray:
+    def getData(self, step_index: int = AbstractChannel.CURRENT_STEP) -> numpy.ndarray:
         """Get channel data."""
 
         if not self.buffering:
@@ -1760,7 +1774,7 @@ class StreamChannel(AbstractChannel):
             try:
                 step = self.data[step_index]
             except IndexError:
-                raise ValueError('step index out of range')
+                raise ValueError("step index out of range")
 
             step_len = len(step)
 
@@ -1801,8 +1815,7 @@ class StreamChannel(AbstractChannel):
             else:
                 return numpy.concatenate(buf)
 
-    def setData(self, d: Any, step_index: int = AbstractChannel.CURRENT_STEP
-                ) -> None:
+    def setData(self, d: Any, step_index: int = AbstractChannel.CURRENT_STEP) -> None:
         """Set channel data."""
 
         # Only necessary for scalar data
@@ -1816,15 +1829,17 @@ class StreamChannel(AbstractChannel):
         if step_index == AbstractChannel.CURRENT_STEP:
             step_index = self.current_index
         elif step_index >= len(self.data):
-            raise ValueError('step index out of range')
+            raise ValueError("step index out of range")
 
         self.data[step_index] = [d]
 
         for s in self.subscribers:
             subscribed_index = s._channel_subscriber_step_index
 
-            if (subscribed_index == AbstractChannel.CURRENT_STEP and
-                    step_index == self.current_index):
+            if (
+                subscribed_index == AbstractChannel.CURRENT_STEP
+                and step_index == self.current_index
+            ):
                 s.dataSet(d)
             elif subscribed_index == step_index:
                 s.dataSet(d)
@@ -1861,8 +1876,10 @@ class StreamChannel(AbstractChannel):
         for s in self.subscribers:
             step_index = s._channel_subscriber_step_index
 
-            if (step_index == AbstractChannel.CURRENT_STEP or
-                    step_index == self.current_index):
+            if (
+                step_index == AbstractChannel.CURRENT_STEP
+                or step_index == self.current_index
+            ):
                 s.dataCleared()
 
     def isBuffering(self) -> bool:
@@ -1896,7 +1913,7 @@ class StreamChannel(AbstractChannel):
         self.range_min = new_min
         self.range_max = new_max
 
-        self._notify('rangeChanged')
+        self._notify("rangeChanged")
 
 
 NumericChannel = StreamChannel  # previous name for compatibility
@@ -1904,17 +1921,18 @@ NumericChannel = StreamChannel  # previous name for compatibility
 
 class DatagramChannel(AbstractChannel):
     def __init__(self, *names, **options) -> None:
-        if 'compression' in options:
+        if "compression" in options:
             self.compress_args = {
-                'compression': 'gzip',
-                'compression_opts': (4 if options['compression'] is True
-                                     else int(options['compression']))
+                "compression": "gzip",
+                "compression_opts": (
+                    4 if options["compression"] is True else int(options["compression"])
+                ),
             }
         else:
             self.compress_args = {}
 
         try:
-            self.transient = bool(options['transient'])
+            self.transient = bool(options["transient"])
         except KeyError:
             self.transient = False
 
@@ -1931,15 +1949,15 @@ class DatagramChannel(AbstractChannel):
     def _addMetaData(self) -> None:
         attrs = self.h5file.attrs
 
-        attrs['name'] = self.name
-        attrs['freq'] = AbstractChannel.getFrequencyString(self.freq)
-        attrs['hint'] = AbstractChannel.getHintString(self.hint)
+        attrs["name"] = self.name
+        attrs["freq"] = AbstractChannel.getFrequencyString(self.freq)
+        attrs["hint"] = AbstractChannel.getHintString(self.hint)
 
         for tag, value in self.header_tags.items():
             attrs[tag] = value
 
         for key, value in self.display_arguments.items():
-            attrs['DISPLAY ' + key] = value
+            attrs["DISPLAY " + key] = value
 
     def openStorage(self, base_path: str) -> None:
         if self.transient:
@@ -1948,12 +1966,12 @@ class DatagramChannel(AbstractChannel):
         self.storage_base = base_path
 
         if self.freq == AbstractChannel.STEP_SAMPLES:
-            self.h5file = h5py.File('{0}_{1}.h5'.format(self.storage_base,
-                                                        self.name), 'w')
+            self.h5file = h5py.File(
+                "{0}_{1}.h5".format(self.storage_base, self.name), "w"
+            )
 
     def closeStorage(self) -> None:
-        if (self.storage_base is not None and
-                self.freq == AbstractChannel.STEP_SAMPLES):
+        if self.storage_base is not None and self.freq == AbstractChannel.STEP_SAMPLES:
             self._addMetaData()
             self.h5file.close()
             del self.h5file
@@ -1984,8 +2002,7 @@ class DatagramChannel(AbstractChannel):
     def beginScan(self, scan_counter: int) -> None:
         super().beginScan(scan_counter)
 
-        if self.storage_base is not None and \
-                self.freq == AbstractChannel.STEP_SAMPLES:
+        if self.storage_base is not None and self.freq == AbstractChannel.STEP_SAMPLES:
             self.h5scan = self.h5file.create_group(str(scan_counter))
 
         self.step_idx = -1
@@ -1999,8 +2016,10 @@ class DatagramChannel(AbstractChannel):
         if self.storage_base is not None:
             if self.freq == AbstractChannel.CONTINUOUS_SAMPLES:
                 self.h5file = h5py.File(
-                    '{0}_{1}_{2}.h5'.format(self.storage_base, self.name,
-                                            self.step_idx), 'w'
+                    "{0}_{1}_{2}.h5".format(
+                        self.storage_base, self.name, self.step_idx
+                    ),
+                    "w",
                 )
 
             elif self.freq == AbstractChannel.STEP_SAMPLES:
@@ -2016,14 +2035,17 @@ class DatagramChannel(AbstractChannel):
                 if self.last_datum is None:
                     return
 
-                im_name = (self.next_dset_name
-                           if self.next_dset_name is not None
-                           else str(self.image_idx))
+                im_name = (
+                    self.next_dset_name
+                    if self.next_dset_name is not None
+                    else str(self.image_idx)
+                )
 
                 im_dset = self.h5scan.create_dataset(
-                    im_name, data=self.last_datum,
+                    im_name,
+                    data=self.last_datum,
                     chunks=self.last_datum.shape,
-                    **self.compress_args
+                    **self.compress_args,
                 )
 
                 self.last_datum = None
@@ -2040,23 +2062,26 @@ class DatagramChannel(AbstractChannel):
         for s in self.subscribers:
             s.dataCleared()
 
-    def getData(self, step_index: int = AbstractChannel.CURRENT_STEP
-                ) -> numpy.ndarray:
+    def getData(self, step_index: int = AbstractChannel.CURRENT_STEP) -> numpy.ndarray:
         return self.last_datum
 
     def setData(self, d: Any) -> None:
-        raise TypeError('setData not supported by DatagramChannel (yet!)')
+        raise TypeError("setData not supported by DatagramChannel (yet!)")
 
     def addData(self, d: Any, **metadata: Any):
-        if (self.storage_base is not None and
-                self.freq == AbstractChannel.CONTINUOUS_SAMPLES):
-            im_name = (self.next_dset_name
-                       if self.next_dset_name is not None
-                       else str(self.image_idx))
+        if (
+            self.storage_base is not None
+            and self.freq == AbstractChannel.CONTINUOUS_SAMPLES
+        ):
+            im_name = (
+                self.next_dset_name
+                if self.next_dset_name is not None
+                else str(self.image_idx)
+            )
 
-            im_dset = self.h5file.create_dataset(im_name, data=d,
-                                                 chunks=d.shape,
-                                                 **self.compress_args)
+            im_dset = self.h5file.create_dataset(
+                im_name, data=d, chunks=d.shape, **self.compress_args
+            )
 
             for key, value in metadata.items():
                 im_dset.attrs[key] = value
@@ -2079,22 +2104,22 @@ class LogChannel(AbstractChannel):
     OP_CLOSE_CHANNEL = 2
     OP_QUIT = 3
 
-    storage_root = '.'
+    storage_root = "."
     ch_count = 0
     logger_p = None
     op_in = None
-    compression_args = dict(compression='gzip', compression_opts=4)
+    compression_args = dict(compression="gzip", compression_opts=4)
 
-    def __init__(self, *names,
-                 interval: int = -1, fields: List[Tuple[str, str]] = [],
-                 **options) -> None:
+    def __init__(
+        self, *names, interval: int = -1, fields: List[Tuple[str, str]] = [], **options
+    ) -> None:
         if interval <= 0:
-            raise ValueError('interval must be greater than zero')
+            raise ValueError("interval must be greater than zero")
 
         if fields is None:
-            raise ValueError('no fields to log')
+            raise ValueError("no fields to log")
 
-        options['static'] = True
+        options["static"] = True
 
         super().__init__(*names, **options)
 
@@ -2102,15 +2127,13 @@ class LogChannel(AbstractChannel):
             op_out, op_in = multiprocessing.Pipe(False)
 
             LogChannel.logger_p = multiprocessing.Process(
-                target=LogChannel.logger_main,
-                args=(LogChannel.storage_root, op_out)
+                target=LogChannel.logger_main, args=(LogChannel.storage_root, op_out)
             )
             LogChannel.logger_p.start()
 
             LogChannel.op_in = op_in
 
-        LogChannel.op_in.send((LogChannel.OP_OPEN_CHANNEL, self.name,
-                               interval, fields))
+        LogChannel.op_in.send((LogChannel.OP_OPEN_CHANNEL, self.name, interval, fields))
         LogChannel.ch_count += 1
 
     def close(self) -> None:
@@ -2138,7 +2161,7 @@ class LogChannel(AbstractChannel):
                 _, name, label, time, data = msg
 
                 time = datetime.datetime.fromtimestamp(time)
-                dset_name = '{0}/{1}'.format(label, time.strftime('%Y-%m-%d'))
+                dset_name = "{0}/{1}".format(label, time.strftime("%Y-%m-%d"))
 
                 h5f, interval, dtype, empty_rec = cur_channels[name]
                 h5d = None
@@ -2150,32 +2173,39 @@ class LogChannel(AbstractChannel):
                         # If we have a dtype mismatch, we rename the
                         # "wrong" dataset and create our own new one.
 
-                        replacement_name = dset_name + '_DTYPE_MISMATCH'
+                        replacement_name = dset_name + "_DTYPE_MISMATCH"
                         i = 2
 
                         while replacement_name in h5f:
-                            replacement_name = '{0}_DTYPE_MISMATCH{1}'.format(
+                            replacement_name = "{0}_DTYPE_MISMATCH{1}".format(
                                 dset_name, i
                             )
                             i += 1
 
-                        h5f.create_dataset(replacement_name,
-                                           dtype=h5d.dtype, data=h5d,
-                                           **LogChannel.compression_args)
+                        h5f.create_dataset(
+                            replacement_name,
+                            dtype=h5d.dtype,
+                            data=h5d,
+                            **LogChannel.compression_args,
+                        )
                         del h5f[dset_name]
                         h5d = None
 
                 if h5d is None:
                     h5d = h5f.create_dataset(
-                        dset_name, shape=(1,), maxshape=(None,),
-                        chunks=(int(3600/interval),), dtype=dtype,
-                        **LogChannel.compression_args)
+                        dset_name,
+                        shape=(1,),
+                        maxshape=(None,),
+                        chunks=(int(3600 / interval),),
+                        dtype=dtype,
+                        **LogChannel.compression_args,
+                    )
                 else:
                     h5d.resize(h5d.shape[0] + 1, axis=0)
 
-                empty_rec[0][0] = time.strftime('%H%M%S').encode('ascii')
+                empty_rec[0][0] = time.strftime("%H%M%S").encode("ascii")
                 for i in range(len(data)):
-                    empty_rec[0][i+1] = data[i]
+                    empty_rec[0][i + 1] = data[i]
 
                 h5d[-1] = empty_rec
 
@@ -2188,12 +2218,11 @@ class LogChannel(AbstractChannel):
                 if channel_name in cur_channels:
                     continue
 
-                fields.insert(0, ('time', 'S6'))
+                fields.insert(0, ("time", "S6"))
                 dtype = numpy.dtype(fields, align=False)
                 empty_rec = numpy.empty((1,), dtype)
 
-                h5f = h5py.File('{0}/{1}.h5'.format(storage_root,
-                                                    channel_name), 'a')
+                h5f = h5py.File("{0}/{1}.h5".format(storage_root, channel_name), "a")
 
                 cur_channels[channel_name] = (h5f, interval, dtype, empty_rec)
 
@@ -2216,25 +2245,22 @@ class LogChannel(AbstractChannel):
         # explicit command for it
 
     def openStorage(self, base_path: str) -> None:
-        raise NotImplementedError('non-static storage not supported by '
-                                  'LogChannel')
+        raise NotImplementedError("non-static storage not supported by LogChannel")
 
     def closeStorage(self) -> None:
-        raise NotImplementedError('non-static storage not supported by '
-                                  'LogChannel')
+        raise NotImplementedError("non-static storage not supported by LogChannel")
 
     def setData(self, d: Any) -> None:
-        raise NotImplementedError('setData not supported by LogChannel')
+        raise NotImplementedError("setData not supported by LogChannel")
 
-    def addData(self, *d, label: str = '', time: int = 0) -> None:
+    def addData(self, *d, label: str = "", time: int = 0) -> None:
         if time == 0:
             time = time_now()
 
-        LogChannel.op_in.send((LogChannel.OP_ADD_DATA, self.name, label,
-                               time, d))
+        LogChannel.op_in.send((LogChannel.OP_ADD_DATA, self.name, label, time, d))
 
     def clearData(self) -> None:
-        raise NotImplementedError('clearData not supported by LogChannel')
+        raise NotImplementedError("clearData not supported by LogChannel")
 
 
 # For compatibility with older versions of Python on Windows (i.e. using

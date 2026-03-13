@@ -1,10 +1,10 @@
-
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 
 import time
+import importlib.resources
 
 import numpy  # noqa
 from PyQt5 import QtCore
@@ -12,7 +12,7 @@ from PyQt5 import QtWidgets
 from PyQt5 import uic as QtUic
 
 import metro
-from metro.frontend import widgets
+from .. import widgets
 
 
 class EditNormalizedChannelDialog(QtWidgets.QDialog):
@@ -21,12 +21,12 @@ class EditNormalizedChannelDialog(QtWidgets.QDialog):
 
         self.channel = channel
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'channels_edit_normalized.ui'), self)
+        with importlib.resources.path(
+            __package__, "channels_edit_normalized.ui"
+        ) as fspath:
+            QtUic.loadUi(fspath, self)
 
-        self.buttonDiscard = self.buttonBox.button(
-            QtWidgets.QDialogButtonBox.Discard
-        )
+        self.buttonDiscard = self.buttonBox.button(QtWidgets.QDialogButtonBox.Discard)
         self.buttonDiscard.clicked.connect(self.on_buttonBox_discarded)
 
         if self.channel is not None:
@@ -34,17 +34,18 @@ class EditNormalizedChannelDialog(QtWidgets.QDialog):
                 name_to_normalize = self.channel._custom_to_normalize
                 names_normalize_by = self.channel._custom_normalize_by
             except AttributeError:
-                metro.app.showError('A conflicting channel parameter was '
-                                    'encountered.', 'Could not find custom '
-                                    'channel properties of normalized '
-                                    'channels.')
+                metro.app.showError(
+                    "A conflicting channel parameter was encountered.",
+                    "Could not find custom channel properties of normalized channels.",
+                )
                 self.reject()
                 return
 
             if self.channel.locked:
-                metro.app.showError('A conflicting channel parameter was '
-                                    'encountered.', 'The channel is currently '
-                                    'locked.')
+                metro.app.showError(
+                    "A conflicting channel parameter was encountered.",
+                    "The channel is currently locked.",
+                )
                 # We can go on after this, since there is another check
                 # on accepting the dialog.
 
@@ -55,29 +56,28 @@ class EditNormalizedChannelDialog(QtWidgets.QDialog):
         else:
             self.buttonDiscard.setEnabled(False)
 
-            own_name = ''
-            name_to_normalize = ''
+            own_name = ""
+            name_to_normalize = ""
             names_normalize_by = []
 
-            self.labelScriptedEdit.setText('')
+            self.labelScriptedEdit.setText("")
 
-        channels_list = [metro.getChannel(x) for x in
-                         sorted(metro.queryChannels(hint='waveform'))]
+        channels_list = [
+            metro.getChannel(x) for x in sorted(metro.queryChannels(hint="waveform"))
+        ]
 
         for channel in channels_list:
             if channel.name == own_name:
                 continue
 
-            channel_item = QtWidgets.QListWidgetItem(channel.name,
-                                                     self.listToNormalize)
+            channel_item = QtWidgets.QListWidgetItem(channel.name, self.listToNormalize)
 
             self.listToNormalize.addItem(channel_item)
 
             if channel.name == name_to_normalize:
                 channel_item.setSelected(True)
 
-            channel_item = QtWidgets.QListWidgetItem(channel.name,
-                                                     self.listNormalizeBy)
+            channel_item = QtWidgets.QListWidgetItem(channel.name, self.listNormalizeBy)
 
             self.listNormalizeBy.addItem(channel_item)
 
@@ -90,29 +90,28 @@ class EditNormalizedChannelDialog(QtWidgets.QDialog):
             return
 
         res = QtWidgets.QMessageBox.warning(
-            self, f'Edit as scripted channel - {metro.WINDOW_TITLE}',
-            'This action will turn this channel into a scripted channel. It '
-            'will not be possible to edit it as a normalized channel again. '
-            'Are you sure you want to continue?',
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+            self,
+            f"Edit as scripted channel - {metro.WINDOW_TITLE}",
+            "This action will turn this channel into a scripted channel. It "
+            "will not be possible to edit it as a normalized channel again. "
+            "Are you sure you want to continue?",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
         )
 
         if res != QtWidgets.QMessageBox.Yes:
             return
 
-        normalize_by = [metro.getChannel(x) for x
-                        in self.channel._custom_normalize_by]
+        normalize_by = [metro.getChannel(x) for x in self.channel._custom_normalize_by]
 
-        self.channel._custom_arg_variables = ['n'+str(i) for i
-                                              in range(len(normalize_by))]
-        self.channel._custom_arg_variables.insert(0, 'x')
+        self.channel._custom_arg_variables = [
+            "n" + str(i) for i in range(len(normalize_by))
+        ]
+        self.channel._custom_arg_variables.insert(0, "x")
 
-        by_strs = ['n'+str(i) for i in range(len(normalize_by))]
-        self.channel._custom_kernel_source = 'return x/({0})'.format(
-            '*'.join(by_strs)
-        )
+        by_strs = ["n" + str(i) for i in range(len(normalize_by))]
+        self.channel._custom_kernel_source = "return x/({0})".format("*".join(by_strs))
         self.channel._custom_init_enabled = False
-        self.channel._custom_init_source = ''
+        self.channel._custom_init_source = ""
         self.channel._custom_init_object = None
 
         del self.channel._custom_to_normalize
@@ -126,15 +125,16 @@ class EditNormalizedChannelDialog(QtWidgets.QDialog):
         name = self.editName.text()
 
         if not name:
-            metro.app.showError('An error occured with the entered data.',
-                                'A channel name is required.')
+            metro.app.showError(
+                "An error occured with the entered data.", "A channel name is required."
+            )
             return
 
-        to_normalize = metro.getChannel(
-            self.listToNormalize.selectedItems()[0].text()
-        )
-        normalize_by = [metro.getChannel(item.text()) for item
-                        in self.listNormalizeBy.selectedItems()]
+        to_normalize = metro.getChannel(self.listToNormalize.selectedItems()[0].text())
+        normalize_by = [
+            metro.getChannel(item.text())
+            for item in self.listNormalizeBy.selectedItems()
+        ]
 
         arg_channels = normalize_by.copy()
         arg_channels.insert(0, to_normalize)
@@ -144,19 +144,22 @@ class EditNormalizedChannelDialog(QtWidgets.QDialog):
 
         for ch in normalize_by:
             if ch.freq != channel_freq or ch.shape != channel_shape:
-                metro.app.showError('An error occured with the entered data.',
-                                    'The selected channels have different '
-                                    'frequencies and/or shapes.')
+                metro.app.showError(
+                    "An error occured with the entered data.",
+                    "The selected channels have different frequencies and/or shapes.",
+                )
 
-        by_strs = ['n'+str(i) for i in range(len(normalize_by))]
-        kernel_func = eval('lambda x,{0}: x/({1})'.format(','.join(by_strs),
-                                                          '*'.join(by_strs)))
+        by_strs = ["n" + str(i) for i in range(len(normalize_by))]
+        kernel_func = eval(
+            "lambda x,{0}: x/({1})".format(",".join(by_strs), "*".join(by_strs))
+        )
 
         if self.channel is not None:
             if self.channel.locked:
-                metro.app.showError('A conflicting channel parameter was '
-                                    'encountered.', 'The channel is currently '
-                                    'locked.')
+                metro.app.showError(
+                    "A conflicting channel parameter was encountered.",
+                    "The channel is currently locked.",
+                )
                 return
 
             if self.channel.input_channels != arg_channels:
@@ -168,12 +171,11 @@ class EditNormalizedChannelDialog(QtWidgets.QDialog):
             self.channel.setFrequency(channel_freq)
         else:
             try:
-                channel = metro.NumericChannel('$'+name, hint='waveform',
-                                               freq=channel_freq,
-                                               shape=channel_shape)
+                channel = metro.NumericChannel(
+                    "$" + name, hint="waveform", freq=channel_freq, shape=channel_shape
+                )
             except ValueError as e:
-                metro.app.showError('An error occured on creating the '
-                                    'channel.', str(e))
+                metro.app.showError("An error occured on creating the channel.", str(e))
                 return
 
             channel._custom = True
@@ -192,9 +194,10 @@ class EditNormalizedChannelDialog(QtWidgets.QDialog):
             return
 
         res = QtWidgets.QMessageBox.warning(
-            self, f'Delete normalized channel - {metro.WINDOW_TITLE}',
-            'Are you sure to delete this channel?',
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+            self,
+            f"Delete normalized channel - {metro.WINDOW_TITLE}",
+            "Are you sure to delete this channel?",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
         )
 
         if res != QtWidgets.QMessageBox.Yes:
@@ -206,23 +209,23 @@ class EditNormalizedChannelDialog(QtWidgets.QDialog):
 
 class EditStatisticsChannelDialog(QtWidgets.QDialog):
     kernel_sources = {
-        'sum': 'numpy.sum(x, axis=0)',
-        'mean': 'numpy.average(x, axis=0)',
-        'median': 'numpy.median(x, axis=0)',
-        'range': 'numpy.amax(x, axis=0) - numpy.amin(x, axis=0)',
-        'variance': 'numpy.variance(x, axis=0)',
-        'stdev': 'numpy.std(x, axis=0)'
+        "sum": "numpy.sum(x, axis=0)",
+        "mean": "numpy.average(x, axis=0)",
+        "median": "numpy.median(x, axis=0)",
+        "range": "numpy.amax(x, axis=0) - numpy.amin(x, axis=0)",
+        "variance": "numpy.variance(x, axis=0)",
+        "stdev": "numpy.std(x, axis=0)",
     }
 
     kernel_descriptions = {
-        'sum': 'The sum of all samples generated in one step',
-        'mean': 'The mean of all samples generated in one step',
-        'median': 'The median of all samples generated in one step',
-        'range': 'The difference between the maximum and mimimum of all '
-                 'samples generated in one step.',
-        'variance': 'The squared deviation from the mean of all samples '
-                    'generated in one step',
-        'stdev': 'The square root of the variation'
+        "sum": "The sum of all samples generated in one step",
+        "mean": "The mean of all samples generated in one step",
+        "median": "The median of all samples generated in one step",
+        "range": "The difference between the maximum and mimimum of all "
+        "samples generated in one step.",
+        "variance": "The squared deviation from the mean of all samples "
+        "generated in one step",
+        "stdev": "The square root of the variation",
     }
 
     def __init__(self, channel=None):
@@ -230,12 +233,12 @@ class EditStatisticsChannelDialog(QtWidgets.QDialog):
 
         self.channel = channel
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'channels_edit_statistics.ui'), self)
+        with importlib.resources.path(
+            __package__, "channels_edit_statistics.ui"
+        ) as fspath:
+            QtUic.loadUi(fspath, self)
 
-        self.buttonDiscard = self.buttonBox.button(
-            QtWidgets.QDialogButtonBox.Discard
-        )
+        self.buttonDiscard = self.buttonBox.button(QtWidgets.QDialogButtonBox.Discard)
         self.buttonDiscard.clicked.connect(self.on_buttonBox_discarded)
 
         if self.channel is not None:
@@ -243,17 +246,18 @@ class EditStatisticsChannelDialog(QtWidgets.QDialog):
                 name_to_integrate = self.channel._custom_to_integrate
                 func = self.channel._custom_func
             except AttributeError:
-                metro.app.showError('A conflicting channel parameter was '
-                                    'encountered.', 'Could not find custom '
-                                    'channel properties of statistics '
-                                    'channels.')
+                metro.app.showError(
+                    "A conflicting channel parameter was encountered.",
+                    "Could not find custom channel properties of statistics channels.",
+                )
                 self.reject()
                 return
 
             if self.channel.locked:
-                metro.app.showError('A conflicting channel parameter was '
-                                    'encountered.', 'The channel is currently '
-                                    'locked.')
+                metro.app.showError(
+                    "A conflicting channel parameter was encountered.",
+                    "The channel is currently locked.",
+                )
                 # We can go on after this, since there is another check
                 # on accepting the dialog.
 
@@ -268,23 +272,26 @@ class EditStatisticsChannelDialog(QtWidgets.QDialog):
         else:
             self.buttonDiscard.setEnabled(False)
 
-            own_name = ''
-            name_to_integrate = ''
+            own_name = ""
+            name_to_integrate = ""
 
-            self.on_selectFunc_currentTextChanged('sum')
+            self.on_selectFunc_currentTextChanged("sum")
 
-            self.labelScriptedEdit.setText('')
+            self.labelScriptedEdit.setText("")
 
-        channels_list = [metro.getChannel(x) for x in
-                         sorted(metro.queryChannels(freq='continuous') +
-                                metro.queryChannels(freq='scheduled'))]
+        channels_list = [
+            metro.getChannel(x)
+            for x in sorted(
+                metro.queryChannels(freq="continuous")
+                + metro.queryChannels(freq="scheduled")
+            )
+        ]
 
         for channel in channels_list:
             if channel.name == own_name:
                 continue
 
-            channel_item = QtWidgets.QListWidgetItem(channel.name,
-                                                     self.listToIntegrate)
+            channel_item = QtWidgets.QListWidgetItem(channel.name, self.listToIntegrate)
 
             self.listToIntegrate.addItem(channel_item)
 
@@ -294,8 +301,9 @@ class EditStatisticsChannelDialog(QtWidgets.QDialog):
     @QtCore.pyqtSlot(str)
     def on_selectFunc_currentTextChanged(self, text):
         self.labelDesc.setText(
-            '<b>{0}</b><br><br>Matrix-shaped channels are evaluated per '
-            'column.'.format(self.kernel_descriptions[text])
+            "<b>{0}</b><br><br>Matrix-shaped channels are evaluated per column.".format(
+                self.kernel_descriptions[text]
+            )
         )
 
     @QtCore.pyqtSlot(str)
@@ -304,22 +312,23 @@ class EditStatisticsChannelDialog(QtWidgets.QDialog):
             return
 
         res = QtWidgets.QMessageBox.warning(
-            self, f'Edit as scripted channel - {metro.WINDOW_TITLE}',
-            'This action will turn this channel into a scripted channel. It '
-            'will not be possible to edit it as a statistics channel again. '
-            'Are you sure you want to continue?',
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+            self,
+            f"Edit as scripted channel - {metro.WINDOW_TITLE}",
+            "This action will turn this channel into a scripted channel. It "
+            "will not be possible to edit it as a statistics channel again. "
+            "Are you sure you want to continue?",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
         )
 
         if res != QtWidgets.QMessageBox.Yes:
             return
 
-        self.channel._custom_arg_variables = ['x']
-        self.channel._custom_kernel_source = 'return ' + self.kernel_sources[
-            self.selectFunc.currentText()
-        ]
+        self.channel._custom_arg_variables = ["x"]
+        self.channel._custom_kernel_source = (
+            "return " + self.kernel_sources[self.selectFunc.currentText()]
+        )
         self.channel._custom_init_enabled = False
-        self.channel._custom_init_source = ''
+        self.channel._custom_init_source = ""
         self.channel._custom_init_object = None
 
         del self.channel._custom_to_integrate
@@ -333,23 +342,23 @@ class EditStatisticsChannelDialog(QtWidgets.QDialog):
         name = self.editName.text()
 
         if not name:
-            metro.app.showError('An error occured with the entered data.',
-                                'A channel name is required.')
+            metro.app.showError(
+                "An error occured with the entered data.", "A channel name is required."
+            )
             return
 
-        to_integrate = metro.getChannel(
-            self.listToIntegrate.selectedItems()[0].text()
-        )
+        to_integrate = metro.getChannel(self.listToIntegrate.selectedItems()[0].text())
 
         kernel_func = eval(
-            'lambda x: ' + self.kernel_sources[self.selectFunc.currentText()]
+            "lambda x: " + self.kernel_sources[self.selectFunc.currentText()]
         )
 
         if self.channel is not None:
             if self.channel.locked:
-                metro.app.showError('A conflicting channel parameter was '
-                                    'encountered.', 'The channel is currently '
-                                    'locked.')
+                metro.app.showError(
+                    "A conflicting channel parameter was encountered.",
+                    "The channel is currently locked.",
+                )
                 return
 
             if self.channel.input_channels != [to_integrate]:
@@ -359,12 +368,13 @@ class EditStatisticsChannelDialog(QtWidgets.QDialog):
                 self.channel.kernel = kernel_func
         else:
             try:
-                channel = metro.NumericChannel('$'+name, hint='waveform',
-                                               freq='step',
-                                               shape=to_integrate.shape)
+                channel = metro.NumericChannel(
+                    "$" + name, hint="waveform", freq="step", shape=to_integrate.shape
+                )
             except ValueError as e:
-                metro.app.showError('An error occured on creating the '
-                                    'channel.', str(e), details=e)
+                metro.app.showError(
+                    "An error occured on creating the channel.", str(e), details=e
+                )
                 return
 
             channel._custom = True
@@ -383,9 +393,10 @@ class EditStatisticsChannelDialog(QtWidgets.QDialog):
             return
 
         res = QtWidgets.QMessageBox.warning(
-            self, f'Delete scripted channel - {metro.WINDOW_TITLE}',
-            'Are you sure to delete this channel?',
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+            self,
+            f"Delete scripted channel - {metro.WINDOW_TITLE}",
+            "Are you sure to delete this channel?",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
         )
 
         if res != QtWidgets.QMessageBox.Yes:
@@ -399,16 +410,16 @@ class EditArgumentChannelDialog(QtWidgets.QDialog):
     def __init__(self, parent):
         super().__init__(parent)
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'channels_edit_argument.ui'), self)
+        with importlib.resources.path(
+            __package__, "channels_edit_argument.ui"
+        ) as fspath:
+            QtUic.loadUi(fspath, self)
 
-        self.buttonFindChannel.setIcon(self.style().standardIcon(
-            QtWidgets.QStyle.SP_DirOpenIcon
-        ))
-
-        self.buttonDiscard = self.buttonBox.button(
-            QtWidgets.QDialogButtonBox.Discard
+        self.buttonFindChannel.setIcon(
+            self.style().standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
         )
+
+        self.buttonDiscard = self.buttonBox.button(QtWidgets.QDialogButtonBox.Discard)
         self.buttonDiscard.clicked.connect(self.on_buttonBox_discarded)
 
     def getChannel(self):
@@ -418,7 +429,7 @@ class EditArgumentChannelDialog(QtWidgets.QDialog):
         return self.editVariable.text()
 
     @QtCore.pyqtSlot()
-    def exec_(self, channel_name='', variable_name='', own_name=''):
+    def exec_(self, channel_name="", variable_name="", own_name=""):
         self.editChannel.setText(channel_name)
         self.editVariable.setText(variable_name)
 
@@ -431,8 +442,7 @@ class EditArgumentChannelDialog(QtWidgets.QDialog):
     @QtCore.pyqtSlot()
     def on_buttonFindChannel_clicked(self):
         ch = metro.app.findChannelByDialog(
-            selected_channel=self.editChannel.text(),
-            excluded_channels=[self.own_name]
+            selected_channel=self.editChannel.text(), excluded_channels=[self.own_name]
         )
 
         if ch is not None:
@@ -443,22 +453,26 @@ class EditArgumentChannelDialog(QtWidgets.QDialog):
         channel_name = self.editChannel.text()
 
         if not channel_name:
-            metro.app.showError('An error occured with the entered data.',
-                                'No channel specified.')
+            metro.app.showError(
+                "An error occured with the entered data.", "No channel specified."
+            )
             return
 
         try:
             metro.getChannel(channel_name)
         except KeyError:
-            metro.app.showError('An error occured with the entered data.',
-                                'Could not find specified channel.')
+            metro.app.showError(
+                "An error occured with the entered data.",
+                "Could not find specified channel.",
+            )
             return
 
         variable_name = self.editVariable.text()
 
         if not variable_name:
-            metro.app.showError('An error occured with the entered data.',
-                                'No variable name specified.')
+            metro.app.showError(
+                "An error occured with the entered data.", "No variable name specified."
+            )
             return
 
         self.discard = False
@@ -483,12 +497,12 @@ class EditScriptedChannelDialog(QtWidgets.QDialog):
         self.kernel_object = None
         self.init_object = None
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'channels_edit_scripted.ui'), self)
+        with importlib.resources.path(
+            __package__, "channels_edit_scripted.ui"
+        ) as fspath:
+            QtUic.loadUi(fspath, self)
 
-        self.buttonDiscard = self.buttonBox.button(
-            QtWidgets.QDialogButtonBox.Discard
-        )
+        self.buttonDiscard = self.buttonBox.button(QtWidgets.QDialogButtonBox.Discard)
         self.buttonDiscard.clicked.connect(self.on_buttonBox_discarded)
 
         self.check_timer = QtCore.QTimer(self)
@@ -505,16 +519,18 @@ class EditScriptedChannelDialog(QtWidgets.QDialog):
             try:
                 self.arg_variables = self.channel._custom_arg_variables
             except AttributeError:
-                metro.app.showError('A conflicting channel parameter was '
-                                    'encountered.', 'Could not find custom '
-                                    'channel properties of scripted channels.')
+                metro.app.showError(
+                    "A conflicting channel parameter was encountered.",
+                    "Could not find custom channel properties of scripted channels.",
+                )
                 self.reject()
                 return
 
             if self.channel.locked:
-                metro.app.showError('A conflicting channel parameter was '
-                                    'encountered.', 'The channel is currently '
-                                    'locked.')
+                metro.app.showError(
+                    "A conflicting channel parameter was encountered.",
+                    "The channel is currently locked.",
+                )
                 # We can go on after this, since there is another check
                 # on accepting the dialog.
 
@@ -523,14 +539,15 @@ class EditScriptedChannelDialog(QtWidgets.QDialog):
 
             if self.channel.mode == metro.AbstractChannel.COMPUTING_MODE:
                 self.checkComputing.setChecked(True)
-                self.mode_func = 'setComputing'
+                self.mode_func = "setComputing"
             elif self.channel.mode == metro.AbstractChannel.INTEGRATING_MODE:
                 self.checkIntegrating.setChecked(True)
-                self.mode_func = 'setIntegrating'
+                self.mode_func = "setIntegrating"
             else:
-                metro.app.showError('A conflicting channel parameter was '
-                                    'encountered.', 'The channel is neither '
-                                    'in computing nor integrating mode.')
+                metro.app.showError(
+                    "A conflicting channel parameter was encountered.",
+                    "The channel is neither in computing nor integrating mode.",
+                )
                 self.reject()
                 return
 
@@ -545,9 +562,7 @@ class EditScriptedChannelDialog(QtWidgets.QDialog):
             # modify it without confusing the channel itself.
             self.arg_channels = self.channel.input_channels.copy()
 
-            self.editKernelCode.setPlainText(
-                self.channel._custom_kernel_source
-            )
+            self.editKernelCode.setPlainText(self.channel._custom_kernel_source)
             self.checkInitCode.setChecked(self.channel._custom_init_enabled)
             self.editInitCode.setPlainText(self.channel._custom_init_source)
 
@@ -559,22 +574,22 @@ class EditScriptedChannelDialog(QtWidgets.QDialog):
             self.buttonDiscard.setEnabled(False)
 
             self.checkComputing.setChecked(True)
-            self.mode_func = 'setComputing'
+            self.mode_func = "setComputing"
 
         self.non_integrating_freq = self.selectFreq.currentIndex()
 
-        self.highlighter = widgets.PythonHighlighter(
-            self.editKernelCode.document()
-        )
+        self.highlighter = widgets.PythonHighlighter(self.editKernelCode.document())
 
         self.warning_str = None
 
     def _updateKernelDef(self):
         format_str = '<a href="#{0}">{0}</a>'
 
-        self.labelKernelDef.setText('<b>def func({0}):'.format(', '.join(
-            [format_str.format(key) for key in self.arg_variables]
-        )))
+        self.labelKernelDef.setText(
+            "<b>def func({0}):".format(
+                ", ".join([format_str.format(key) for key in self.arg_variables])
+            )
+        )
 
         self.check_timer.start()
 
@@ -584,7 +599,7 @@ class EditScriptedChannelDialog(QtWidgets.QDialog):
             self.selectFreq.setEnabled(True)
             self.selectFreq.setCurrentIndex(self.non_integrating_freq)
 
-            self.mode_func = 'setComputing'
+            self.mode_func = "setComputing"
 
             self.check_timer.start()
 
@@ -596,7 +611,7 @@ class EditScriptedChannelDialog(QtWidgets.QDialog):
             self.selectFreq.setCurrentIndex(1)
             self.selectFreq.setEnabled(False)
 
-            self.mode_func = 'setIntegrating'
+            self.mode_func = "setIntegrating"
 
             self.check_timer.start()
 
@@ -615,9 +630,11 @@ class EditScriptedChannelDialog(QtWidgets.QDialog):
         except Exception:
             return
 
-        res = self.arg_dialog.exec_(self.arg_channels[arg_idx].name,
-                                    self.arg_variables[arg_idx],
-                                    self.editName.text())
+        res = self.arg_dialog.exec_(
+            self.arg_channels[arg_idx].name,
+            self.arg_variables[arg_idx],
+            self.editName.text(),
+        )
 
         if res == QtWidgets.QDialog.Accepted:
             if self.arg_dialog.discard:
@@ -647,8 +664,9 @@ class EditScriptedChannelDialog(QtWidgets.QDialog):
         name = self.editName.text()
 
         if not name:
-            metro.app.showError('An error occured with the entered data.',
-                                'A channel name is required.')
+            metro.app.showError(
+                "An error occured with the entered data.", "A channel name is required."
+            )
             return
 
         linked_kernel = metro.app._linkScriptedChannelKernel(
@@ -658,16 +676,16 @@ class EditScriptedChannelDialog(QtWidgets.QDialog):
         if self.channel is not None:
             # Let's recheck!
             if self.channel.locked:
-                metro.app.showError('A conflicting channel parameter was '
-                                    'encountered.', 'The channel is currently '
-                                    'locked.')
+                metro.app.showError(
+                    "A conflicting channel parameter was encountered.",
+                    "The channel is currently locked.",
+                )
                 return
 
             if self.channel.input_channels != self.arg_channels:
                 self.channel.setDirect()
 
-                getattr(self.channel, self.mode_func)(linked_kernel,
-                                                      self.arg_channels)
+                getattr(self.channel, self.mode_func)(linked_kernel, self.arg_channels)
             else:
                 self.channel.kernel = linked_kernel
 
@@ -676,15 +694,17 @@ class EditScriptedChannelDialog(QtWidgets.QDialog):
         else:
             try:
                 channel = metro.NumericChannel(
-                    '$'+name, hint=self.selectHint.currentText(),
+                    "$" + name,
+                    hint=self.selectHint.currentText(),
                     freq=self.selectFreq.currentText(),
                     shape=self.selectShape.currentIndex(),
                     buffering=self.checkBuffering.isChecked(),
-                    transient=self.checkTransient.isChecked()
+                    transient=self.checkTransient.isChecked(),
                 )
             except ValueError as e:
-                metro.app.showError('An error occured on creating the ',
-                                    'channel.', str(e))
+                metro.app.showError(
+                    "An error occured on creating the ", "channel.", str(e)
+                )
                 return
 
             channel._custom = True
@@ -707,9 +727,10 @@ class EditScriptedChannelDialog(QtWidgets.QDialog):
             return
 
         res = QtWidgets.QMessageBox.warning(
-            self, f'Delete scripted channel - {metro.WINDOW_TITLE}',
-            'Are you sure to delete this channel?',
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+            self,
+            f"Delete scripted channel - {metro.WINDOW_TITLE}",
+            "Are you sure to delete this channel?",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
         )
 
         if res != QtWidgets.QMessageBox.Yes:
@@ -728,38 +749,40 @@ class EditScriptedChannelDialog(QtWidgets.QDialog):
         if self.checkInitCode.isChecked():
             init_code = self.editInitCode.toPlainText()
         else:
-            init_code = ''
+            init_code = ""
 
-        self.labelCheckMessage.setText('')
+        self.labelCheckMessage.setText("")
 
         try:
             if kernel_code:
                 self.kernel_object = compile(
-                    metro.app._wrapScriptedChannelKernel(self.arg_variables,
-                                                         kernel_code),
-                    '<kernel>', 'exec'
+                    metro.app._wrapScriptedChannelKernel(
+                        self.arg_variables, kernel_code
+                    ),
+                    "<kernel>",
+                    "exec",
                 )
 
             if init_code:
-                self.init_object = compile(init_code, '<init>', 'exec')
+                self.init_object = compile(init_code, "<init>", "exec")
             else:
                 self.init_object = None
 
         except SyntaxError as e:
             e_str = str(e)
-            last_obrace = e_str.rfind('(')
-            last_comma = e_str.rfind(',')
+            last_obrace = e_str.rfind("(")
+            last_comma = e_str.rfind(",")
 
-            error = e_str[:last_obrace-1]
-            chunk = e_str[last_obrace+2:last_comma-1]
-            line = int(e_str[last_comma+7:-1])
+            error = e_str[: last_obrace - 1]
+            chunk = e_str[last_obrace + 2 : last_comma - 1]
+            line = int(e_str[last_comma + 7 : -1])
 
-            if chunk == 'kernel':
+            if chunk == "kernel":
                 line -= 1
 
-            self.labelCheckMessage.setStyleSheet('color: red;')
+            self.labelCheckMessage.setStyleSheet("color: red;")
             self.labelCheckMessage.setText(
-                '{0} on line {1}: <b>{2}</b>'.format(chunk, line, error)
+                "{0} on line {1}: <b>{2}</b>".format(chunk, line, error)
             )
 
             return
@@ -787,45 +810,55 @@ class EditScriptedChannelDialog(QtWidgets.QDialog):
                     all_transient = False
 
                 if ch.freq != freq:
-                    self.labelCheckMessage.setStyleSheet('color: olive')
-                    self.labelCheckMessage.setText('mismatched frequencies in '
-                                                   'argument channels')
+                    self.labelCheckMessage.setStyleSheet("color: olive")
+                    self.labelCheckMessage.setText(
+                        "mismatched frequencies in argument channels"
+                    )
                     return
                 elif ch.hint != hint:
-                    self.labelCheckMessage.setStyleSheet('color: olive')
-                    self.labelCheckMessage.setText('mismatched hints in '
-                                                   'argument channels')
+                    self.labelCheckMessage.setStyleSheet("color: olive")
+                    self.labelCheckMessage.setText(
+                        "mismatched hints in argument channels"
+                    )
                     return
 
             if none_buffering and self.checkBuffering.isChecked():
-                self.labelCheckMessage.setStyleSheet('color: olive')
-                self.labelCheckMessage.setText('all argument channels are '
-                                               'not buffering yet this '
-                                               'scripted one is')
+                self.labelCheckMessage.setStyleSheet("color: olive")
+                self.labelCheckMessage.setText(
+                    "all argument channels are not buffering yet this scripted one is"
+                )
                 return
 
             if all_transient and not self.checkTransient.isChecked():
-                self.labelCheckMessage.setStyleSheet('color: olive')
-                self.labelCheckMessage.setText('all argument channels are '
-                                               'transient yet this scripted '
-                                               'one is not')
+                self.labelCheckMessage.setStyleSheet("color: olive")
+                self.labelCheckMessage.setText(
+                    "all argument channels are transient yet this scripted one is not"
+                )
                 return
 
             if self.checkIntegrating.isChecked():
                 if freq == metro.AbstractChannel.STEP_SAMPLES:
-                    self.labelCheckMessage.setStyleSheet('color: olive')
-                    self.labelCheckMessage.setText('step based channels do '
-                                                   'not support integration')
+                    self.labelCheckMessage.setStyleSheet("color: olive")
+                    self.labelCheckMessage.setText(
+                        "step based channels do not support integration"
+                    )
                     return
 
 
 class SelectChannelDialog(QtWidgets.QDialog):
-    def __init__(self, selected_channel, excluded_channels,
-                 hint=None, freq=None, type_=None, shape=None):
+    def __init__(
+        self,
+        selected_channel,
+        excluded_channels,
+        hint=None,
+        freq=None,
+        type_=None,
+        shape=None,
+    ):
         super().__init__()
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'channels_select.ui'), self)
+        with importlib.resources.path(__package__, "channels_select.ui") as fspath:
+            QtUic.loadUi(fspath, self)
 
         channel_names = sorted(metro.queryChannels(hint, freq, type_, shape))
 
@@ -833,8 +866,7 @@ class SelectChannelDialog(QtWidgets.QDialog):
             if channel_name in excluded_channels:
                 continue
 
-            channel_item = QtWidgets.QListWidgetItem(channel_name,
-                                                     self.listChannels)
+            channel_item = QtWidgets.QListWidgetItem(channel_name, self.listChannels)
             self.listChannels.addItem(channel_item)
 
             if selected_channel == channel_name:
@@ -850,8 +882,9 @@ class SelectChannelDialog(QtWidgets.QDialog):
     @metro.QSlot()
     def on_buttonBox_accepted(self):
         if len(self.listChannels.selectedItems()) == 0:
-            metro.app.showError('An error occured with the entered data:',
-                                'No channel is selected.')
+            metro.app.showError(
+                "An error occured with the entered data:", "No channel is selected."
+            )
             return
 
         self.accept()
@@ -874,8 +907,9 @@ class DisplayChannelDialog(QtWidgets.QDialog):
             try:
                 self.raw_data = self.channel.getData(step_idx)
             except ValueError as e:
-                metro.app.showError('An error occured when retrieving channel '
-                                    'data', str(e), details=e)
+                metro.app.showError(
+                    "An error occured when retrieving channel data", str(e), details=e
+                )
                 self.row_count = 0
                 self.endResetModel()
 
@@ -908,10 +942,10 @@ class DisplayChannelDialog(QtWidgets.QDialog):
         self.channel = channel
         self.by_value_idx = None
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'channels_display.ui'), self)
+        with importlib.resources.path(__package__, "channels_display.ui") as fspath:
+            QtUic.loadUi(fspath, self)
 
-        self.setWindowTitle('{0} - Metro'.format(channel.name))
+        self.setWindowTitle("{0} - Metro".format(channel.name))
 
         self.displayMode.setText(channel.getModeString(channel.mode))
         self.displayHint.setText(channel.getHintString(channel.hint))
@@ -919,7 +953,7 @@ class DisplayChannelDialog(QtWidgets.QDialog):
 
         if channel.freq == metro.NumericChannel.CONTINUOUS_SAMPLES:
             if channel.step_values:
-                self.editStepIndex.setMaximum(len(channel.step_values)-1)
+                self.editStepIndex.setMaximum(len(channel.step_values) - 1)
 
                 idx = 0
                 for v in channel.step_values:
@@ -969,7 +1003,7 @@ class DisplayChannelDialog(QtWidgets.QDialog):
 
     @QtCore.pyqtSlot(bool)
     def on_checkStepAll_toggled(self, flag):
-        if not hasattr(self, 'model'):
+        if not hasattr(self, "model"):
             # This may happen when we set to 'all' for non-continuous
             # channels during creation.
             return
@@ -1020,13 +1054,13 @@ class DisplayChannelDialog(QtWidgets.QDialog):
         self.channel.clearData()  # Always for current step
 
     def dump(self, filename):
-        with open(filename, 'wb') as fp:
+        with open(filename, "wb") as fp:
             self.channel.dump(self.current_step, fp)
 
     @QtCore.pyqtSlot()
     def on_buttonDump_clicked(self):
         if self.current_step == metro.NumericChannel.ALL_STEPS:
-            step_str = 'all'
+            step_str = "all"
         else:
             if self.current_step == metro.NumericChannel.CURRENT_STEP:
                 # PRIVATE API
@@ -1035,15 +1069,18 @@ class DisplayChannelDialog(QtWidgets.QDialog):
             else:
                 step_idx = self.current_step
 
-            step_str = 'idx={0}'.format(step_idx)
+            step_str = "idx={0}".format(step_idx)
 
-        self.dump('./{0}_{1}_{2}.txt'.format(self.channel.name, step_str,
-                                             time.strftime("%H%M%S_%d%m%Y")))
+        self.dump(
+            "./{0}_{1}_{2}.txt".format(
+                self.channel.name, step_str, time.strftime("%H%M%S_%d%m%Y")
+            )
+        )
 
     @QtCore.pyqtSlot()
     def on_buttonDumpAs_clicked(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, 'Dump {0} as...'.format(self.channel.name)
+            self, "Dump {0} as...".format(self.channel.name)
         )
 
         if filename:

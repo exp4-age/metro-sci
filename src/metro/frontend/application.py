@@ -1,4 +1,3 @@
-
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -10,6 +9,7 @@ import subprocess
 import sys
 import time
 import traceback
+import importlib.resources
 
 import numpy  # noqa
 
@@ -17,6 +17,7 @@ import metro
 from metro.services import profiles
 
 from metro.services import logger
+
 log = logger.log(__name__)
 
 if not metro.core_mode:
@@ -30,27 +31,28 @@ QtWidgets = metro.QtWidgets
 
 
 def _on_exception(*args):
-    with open(os.path.join(metro.LOCAL_PATH, 'exceptions.log'), 'a') as logf:
-        logf.write('----------------------------'
-                      '----------------------------\n')
-        logf.write('- Unchecked exception caught on {0} -\n'.format(
-            time.strftime('%Y/%m/%d at %H:%M:%S')))
-        logf.write('----------------------------'
-                      '----------------------------\n')
+    with open(os.path.join(metro.LOCAL_PATH, "exceptions.log"), "a") as logf:
+        logf.write("--------------------------------------------------------\n")
+        logf.write(
+            "- Unchecked exception caught on {0} -\n".format(
+                time.strftime("%Y/%m/%d at %H:%M:%S")
+            )
+        )
+        logf.write("--------------------------------------------------------\n")
         traceback.print_exception(*args, file=logf)
-        logf.write('\n')
+        logf.write("\n")
 
     traceback.print_exception(*args)
 
 
 class AbstractApplication(object):
     statistics_channel_kernel_sources = {
-        'sum': 'numpy.sum(x, axis=0)',
-        'mean': 'numpy.average(x, axis=0)',
-        'median': 'numpy.median(x, axis=0)',
-        'range': 'numpy.amax(x, axis=0) - numpy.amin(x, axis=0)',
-        'variance': 'numpy.variance(x, axis=0)',
-        'stdev': 'numpy.std(x, axis=0)'
+        "sum": "numpy.sum(x, axis=0)",
+        "mean": "numpy.average(x, axis=0)",
+        "median": "numpy.median(x, axis=0)",
+        "range": "numpy.amax(x, axis=0) - numpy.amin(x, axis=0)",
+        "variance": "numpy.variance(x, axis=0)",
+        "stdev": "numpy.std(x, axis=0)",
     }
 
     def _bootstrap(self, args, version=None, version_short=None):
@@ -62,10 +64,11 @@ class AbstractApplication(object):
         # Set AppUserModelID for Windows 7 and later so that Metro uses
         # its assigned taskbar icon instead of grabbing the one with the
         # same AppUserModelID (would probably result in no icon at all)
-        if os.name == 'nt':
+        if os.name == "nt":
             try:
-                myappid = u"{}.{}".format(metro.SRC_ROOT, metro.WINDOW_TITLE)
+                myappid = "{}.{}".format(metro.SRC_ROOT, metro.WINDOW_TITLE)
                 from ctypes import windll
+
                 windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
             except AttributeError:
                 pass
@@ -75,6 +78,7 @@ class AbstractApplication(object):
 
         if args.gc_debug:
             import gc
+
             gc.set_debug(args.gc_debug)
 
         self.args = args
@@ -93,9 +97,10 @@ class AbstractApplication(object):
         elif version is None:
             try:
                 version_hash = subprocess.check_output(
-                    ['git', 'rev-parse', 'HEAD'],
-                    stderr=subprocess.STDOUT, cwd=metro.SRC_ROOT
-                    )
+                    ["git", "rev-parse", "HEAD"],
+                    stderr=subprocess.STDOUT,
+                    cwd=metro.SRC_ROOT,
+                )
             except FileNotFoundError:
                 version = None
                 version_short = None
@@ -103,17 +108,18 @@ class AbstractApplication(object):
                 version = None
                 version_short = None
             else:
-                if version_hash.startswith(b'fatal'):
+                if version_hash.startswith(b"fatal"):
                     version = None
                     version_short = None
                 else:
                     short_hash = subprocess.check_output(
-                        ['git', 'rev-parse', '--short', 'HEAD'],
-                        stderr=subprocess.STDOUT, cwd=metro.SRC_ROOT
-                        )
+                        ["git", "rev-parse", "--short", "HEAD"],
+                        stderr=subprocess.STDOUT,
+                        cwd=metro.SRC_ROOT,
+                    )
 
-                    version = version_hash.decode('ascii').strip()
-                    version_short = short_hash.decode('ascii').strip()
+                    version = version_hash.decode("ascii").strip()
+                    version_short = short_hash.decode("ascii").strip()
 
         metro.version = version
         metro.version_short = version_short
@@ -129,7 +135,7 @@ class AbstractApplication(object):
             try:
                 self.loadProfile(profile)
             except Exception as e:
-                self.showException('An error occured on loading a profile:', e)
+                self.showException("An error occured on loading a profile:", e)
 
             self.profile_load_timer = None
             del self.profile_load_timer
@@ -141,7 +147,7 @@ class AbstractApplication(object):
         self.profile_load_timer.start()
 
     def _loadDevice(self, entry_point, device_class, name, state):
-        args = state['arguments']
+        args = state["arguments"]
         abstract_args = {}
 
         try:
@@ -161,7 +167,7 @@ class AbstractApplication(object):
         try:
             metro.createDevice(entry_point, name, args=args, state=state)
         except Exception as e:
-            self.showException('An error occured on creating a device:', e)
+            self.showException("An error occured on creating a device:", e)
 
         return True
 
@@ -169,9 +175,9 @@ class AbstractApplication(object):
         normalize_by = []
 
         try:
-            to_normalize = metro.getChannel(state['to_normalize'])
+            to_normalize = metro.getChannel(state["to_normalize"])
 
-            for dep_name in state['normalize_by']:
+            for dep_name in state["normalize_by"]:
                 dep_ch = metro.getChannel(dep_name)
                 normalize_by.append(dep_ch)
         except KeyError:
@@ -180,39 +186,40 @@ class AbstractApplication(object):
         arg_channels = normalize_by.copy()
         arg_channels.insert(0, to_normalize)
 
-        by_strs = ['n'+str(i) for i in range(len(normalize_by))]
-        kernel_func = eval('lambda x,{0}: x/({1})'.format(','.join(by_strs),
-                                                          '*'.join(by_strs)))
+        by_strs = ["n" + str(i) for i in range(len(normalize_by))]
+        kernel_func = eval(
+            "lambda x,{0}: x/({1})".format(",".join(by_strs), "*".join(by_strs))
+        )
 
-        channel = metro.NumericChannel(name, hint='waveform',
-                                       freq=state['freq'],
-                                       shape=state['shape'])
+        channel = metro.NumericChannel(
+            name, hint="waveform", freq=state["freq"], shape=state["shape"]
+        )
         channel.setComputing(kernel_func, arg_channels)
 
         channel._custom = True
-        channel._custom_to_normalize = state['to_normalize']
-        channel._custom_normalize_by = state['normalize_by']
+        channel._custom_to_normalize = state["to_normalize"]
+        channel._custom_normalize_by = state["normalize_by"]
 
         return True
 
     def _loadStatisticsChannel(self, name, state):
         try:
-            to_integrate = metro.getChannel(state['to_integrate'])
+            to_integrate = metro.getChannel(state["to_integrate"])
         except KeyError:
             return False
 
         kernel_func = eval(
-            'lambda x: ' +
-            self.statistics_channel_kernel_sources[state['func']]
+            "lambda x: " + self.statistics_channel_kernel_sources[state["func"]]
         )
 
-        channel = metro.NumericChannel(name, hint=state['hint'], freq='step',
-                                       shape=state['shape'])
+        channel = metro.NumericChannel(
+            name, hint=state["hint"], freq="step", shape=state["shape"]
+        )
         channel.setIntegrating(kernel_func, [to_integrate])
 
         channel._custom = True
-        channel._custom_to_integrate = state['to_integrate']
-        channel._custom_func = state['func']
+        channel._custom_to_integrate = state["to_integrate"]
+        channel._custom_func = state["func"]
 
         return True
 
@@ -220,7 +227,7 @@ class AbstractApplication(object):
         act_channels = []
 
         try:
-            for dep_name in state['arg_channels']:
+            for dep_name in state["arg_channels"]:
                 dep_ch = metro.getChannel(dep_name)
                 act_channels.append(dep_ch)
         except KeyError:
@@ -228,38 +235,41 @@ class AbstractApplication(object):
 
         kernel_object = compile(
             self._wrapScriptedChannelKernel(
-                state['arg_variables'], state['kernel_source']
-            ), '<kernel>', 'exec'
+                state["arg_variables"], state["kernel_source"]
+            ),
+            "<kernel>",
+            "exec",
         )
 
-        if state['init_source']:
-            init_object = compile(state['init_source'], '<init>', 'exec')
+        if state["init_source"]:
+            init_object = compile(state["init_source"], "<init>", "exec")
         else:
             init_object = None
 
-        linked_kernel = self._linkScriptedChannelKernel(
-            init_object, kernel_object
+        linked_kernel = self._linkScriptedChannelKernel(init_object, kernel_object)
+
+        channel = metro.NumericChannel(
+            name,
+            hint=state["hint"],
+            freq=state["freq"],
+            shape=state["shape"],
+            buffing=state["buffering"],
+            transient=state["transient"],
         )
 
-        channel = metro.NumericChannel(name, hint=state['hint'],
-                                       freq=state['freq'],
-                                       shape=state['shape'],
-                                       buffing=state['buffering'],
-                                       transient=state['transient'])
-
-        if state['mode'] == metro.NumericChannel.COMPUTING_MODE:
+        if state["mode"] == metro.NumericChannel.COMPUTING_MODE:
             channel.setComputing(linked_kernel, act_channels)
-        elif state['mode'] == metro.NumericChannel.INTEGRATING_MODE:
+        elif state["mode"] == metro.NumericChannel.INTEGRATING_MODE:
             channel.setIntegrating(linked_kernel, act_channels)
         else:
             # error!
             pass
 
         channel._custom = True
-        channel._custom_arg_variables = state['arg_variables']
-        channel._custom_kernel_source = state['kernel_source']
-        channel._custom_init_enabled = state['init_enabled']
-        channel._custom_init_source = state['init_source']
+        channel._custom_arg_variables = state["arg_variables"]
+        channel._custom_kernel_source = state["kernel_source"]
+        channel._custom_init_enabled = state["init_enabled"]
+        channel._custom_init_source = state["init_source"]
         channel._custom_init_object = init_object
 
         return True
@@ -267,17 +277,17 @@ class AbstractApplication(object):
     def _loadReplayedChannel(self, name, state):
         # Will fail in core mode
 
-        if state['path'].endswith('.txt'):
+        if state["path"].endswith(".txt"):
             return self._loadReplayedStreamChannel(name, state)
 
-        elif state['path'].endswith('.h5'):
+        elif state["path"].endswith(".h5"):
             return self._loadReplayedDatagramChannel(name, state)
 
         else:
-            raise ValueError('unsupported file format for replay')
+            raise ValueError("unsupported file format for replay")
 
     def _loadReplayedStreamChannel(self, name, state):
-        if state['freq'] != metro.NumericChannel.CONTINUOUS_SAMPLES:
+        if state["freq"] != metro.NumericChannel.CONTINUOUS_SAMPLES:
             # Unsupported for now
             return
 
@@ -285,14 +295,14 @@ class AbstractApplication(object):
 
         display_arguments = {}
 
-        with open(state['path'], 'r') as fp:
+        with open(state["path"], "r") as fp:
             cur_offset = 0
 
             # First we read in the header
             for line in fp:
-                if line.startswith('# DISPLAY'):
-                    key = line[10:line.find(':')]
-                    value = line[line.find(':')+2:-1]
+                if line.startswith("# DISPLAY"):
+                    key = line[10 : line.find(":")]
+                    value = line[line.find(":") + 2 : -1]
 
                     try:
                         value = int(value)
@@ -304,7 +314,7 @@ class AbstractApplication(object):
 
                     display_arguments[key] = value
 
-                elif not line.startswith('#'):
+                elif not line.startswith("#"):
                     body_offset = cur_offset
                     break
 
@@ -312,24 +322,27 @@ class AbstractApplication(object):
 
         try:
             chan = metro.NumericChannel(
-                name, hint=state['hint'], freq=state['freq'],
-                shape=state['shape'], static=True
+                name,
+                hint=state["hint"],
+                freq=state["freq"],
+                shape=state["shape"],
+                static=True,
             )
         except ValueError as e:
-            metro.app.showError('An occured on creating the channel', str(e))
+            metro.app.showError("An occured on creating the channel", str(e))
             return
 
         chan.display_arguments = display_arguments
         chan._replayed = True
-        chan._replayed_path = state['path']
+        chan._replayed_path = state["path"]
 
         loader = ReplayStreamChannelDialog.MetroFileLoader(
-            state['path'], state['shape'], body_offset
+            state["path"], state["shape"], body_offset
         )
 
-        loader.finished.connect(metro.QSlot()(
-            lambda: self.on_stream_loader_finished(name, chan, state)
-        ))
+        loader.finished.connect(
+            metro.QSlot()(lambda: self.on_stream_loader_finished(name, chan, state))
+        )
         loader.start()
 
         self._channel_loaders[name] = loader
@@ -337,7 +350,7 @@ class AbstractApplication(object):
         return True
 
     def _loadReplayedDatagramChannel(self, name, state):
-        if state['freq'] != metro.DatagramChannel.STEP_SAMPLES:
+        if state["freq"] != metro.DatagramChannel.STEP_SAMPLES:
             # Unsupported for now
             return
 
@@ -345,19 +358,19 @@ class AbstractApplication(object):
 
         try:
             chan = metro.DatagramChannel(
-                name, hint=state['hint'], freq=state['freq'], static=True
+                name, hint=state["hint"], freq=state["freq"], static=True
             )
         except ValueError as e:
-            metro.app.showError('An occured on creating the channel', str(e))
+            metro.app.showError("An occured on creating the channel", str(e))
             return
 
         chan._replayed = True
-        chan._replayed_path = state['path']
+        chan._replayed_path = state["path"]
 
-        loader = ReplayDatagramChannelDialog.MetroFileLoader(state['path'])
-        loader.finished.connect(metro.QSlot()(
-            lambda: self.on_datagram_loader_finished(name, chan, state)
-        ))
+        loader = ReplayDatagramChannelDialog.MetroFileLoader(state["path"])
+        loader.finished.connect(
+            metro.QSlot()(lambda: self.on_datagram_loader_finished(name, chan, state))
+        )
         loader.start()
 
         self._channel_loaders[name] = loader
@@ -370,7 +383,7 @@ class AbstractApplication(object):
         loader = self._channel_loaders[name]
         del self._channel_loaders[name]
 
-        if state['freq'] == metro.NumericChannel.CONTINUOUS_SAMPLES:
+        if state["freq"] == metro.NumericChannel.CONTINUOUS_SAMPLES:
             chan.data = [[]] * len(loader.data)
 
             for i in range(len(loader.data)):
@@ -387,18 +400,21 @@ class AbstractApplication(object):
         chan.addData(loader.data[-1])
 
     def _loadChannel(self, name, state):
-        if 'to_normalize' in state:
+        if "to_normalize" in state:
             return self._loadNormalizedChannel(name, state)
-        elif 'to_integrate' in state:
+        elif "to_integrate" in state:
             return self._loadStatisticsChannel(name, state)
-        elif 'kernel_source' in state:
+        elif "kernel_source" in state:
             return self._loadScriptedChannel(name, state)
-        elif 'path' in state:
+        elif "path" in state:
             return self._loadReplayedChannel(name, state)
 
     def loadProfile(self, path):
-        actual_path = path if os.path.isfile(path) \
-            else os.path.join(metro.PROFILE_PATH, '{0}.json'.format(path))
+        actual_path = (
+            path
+            if os.path.isfile(path)
+            else os.path.join(metro.PROFILE_PATH, "{0}.json".format(path))
+        )
 
         profile = profiles.load(actual_path)
 
@@ -406,60 +422,60 @@ class AbstractApplication(object):
 
         use_geometry = True
 
-        if profile['platform'] != sys.platform:
+        if profile["platform"] != sys.platform:
             use_geometry = False
 
-        if profile['geometry_hash'] != self._getGeometryHash():
+        if profile["geometry_hash"] != self._getGeometryHash():
             use_geometry = False
 
         # Create a list combining all devices and custom channels to
         # properly resolve the dependencies between them.
 
-        p_devices = profile['devices']
-        p_channels = profile['channels']
+        p_devices = profile["devices"]
+        p_channels = profile["channels"]
 
         if not use_geometry:
             for state in p_devices.values():
-                state['geometry'] = None
+                state["geometry"] = None
 
         names = []
         device_classes = {}
 
         for key, value in p_devices.items():
-            names.append('d' + key)
+            names.append("d" + key)
 
             try:
-                device_classes[value['entry_point']] = \
-                    metro.loadDevice(value['entry_point'])
+                device_classes[value["entry_point"]] = metro.loadDevice(
+                    value["entry_point"]
+                )
             except KeyError:
-                if 'path' in value or 'module' in value:
+                if "path" in value or "module" in value:
                     return self.showError(
-                        'An error occured on loading the profile:',
-                        'This profile was created using an older, '
-                        'experimental version of EXtra-metro and is not '
-                        'compatible with the current, stable format. Please '
-                        'use the module EXtra-metro/compat to continue using '
-                        'it, see details for more information',
-                        'You may switch your EXtra-metro version by typing:'
-                        '\nmodule unload EXtra-metro/<version>'
-                        '\nmodule load EXtra-metro/compat'
-                        '\n\nTo see which version is currenty loaded, type:'
-                        '\nmodule list'
+                        "An error occured on loading the profile:",
+                        "This profile was created using an older, "
+                        "experimental version of EXtra-metro and is not "
+                        "compatible with the current, stable format. Please "
+                        "use the module EXtra-metro/compat to continue using "
+                        "it, see details for more information",
+                        "You may switch your EXtra-metro version by typing:"
+                        "\nmodule unload EXtra-metro/<version>"
+                        "\nmodule load EXtra-metro/compat"
+                        "\n\nTo see which version is currenty loaded, type:"
+                        "\nmodule list",
                     )
 
         for key in p_channels.keys():
-            names.append('c' + key)
+            names.append("c" + key)
 
         previous_count = len(names)
 
         while True:
             for name in names:
-                if name[0] == 'd':
+                if name[0] == "d":
                     state = p_devices[name[1:]]
-                    ep = state['entry_point']
+                    ep = state["entry_point"]
 
-                    if self._loadDevice(ep, device_classes[ep], name[1:],
-                                        state):
+                    if self._loadDevice(ep, device_classes[ep], name[1:], state):
                         names.remove(name)
                 else:
                     if self._loadChannel(name[1:], p_channels[name[1:]]):
@@ -471,27 +487,26 @@ class AbstractApplication(object):
                 break
             elif new_count == previous_count:
                 self.showError(
-                    'An error occured on loading the profile:',
-                    'One or more devices or custom channels could not be '
-                    'restored due to unsatisfiable dependencies.\nThis '
-                    'usually occurs if such a depender remains open while the '
-                    'dependency has already been closed and is then saved '
-                    'into a profile. One example for this can be a display '
-                    'device to a channel belonging to a closed device.'
+                    "An error occured on loading the profile:",
+                    "One or more devices or custom channels could not be "
+                    "restored due to unsatisfiable dependencies.\nThis "
+                    "usually occurs if such a depender remains open while the "
+                    "dependency has already been closed and is then saved "
+                    "into a profile. One example for this can be a display "
+                    "device to a channel belonging to a closed device.",
                 )
                 break
 
             previous_count = new_count
 
         # compatibility for pre-7c4d5218
-        if 'device_groups' not in profile:
-            profile['device_groups'] = {}
+        if "device_groups" not in profile:
+            profile["device_groups"] = {}
 
-        for state in profile['device_groups']:
-            dev_grp = getattr(devices, state['class'])(state['title'],
-                                                       state['custom'])
+        for state in profile["device_groups"]:
+            dev_grp = getattr(devices, state["class"])(state["title"], state["custom"])
 
-            dev_grp.restoreGeometry_(state['geometry'])
+            dev_grp.restoreGeometry_(state["geometry"])
             self.addDeviceGroup(dev_grp)
 
         profile_name = os.path.splitext(os.path.basename(actual_path))[0]
@@ -499,21 +514,29 @@ class AbstractApplication(object):
 
         return profile, use_geometry
 
-    def saveProfile(self, path, device_list=None, channel_list=None,
-                    use_meas_params=True, use_ctrlw_geometry=True,
-                    use_devw_geometries=True):
+    def saveProfile(
+        self,
+        path,
+        device_list=None,
+        channel_list=None,
+        use_meas_params=True,
+        use_ctrlw_geometry=True,
+        use_devw_geometries=True,
+    ):
         profile = {
-            'platform': sys.platform,
-            'geometry_hash': self._getGeometryHash(),
-            'control_window': {
-                'geometry': (self.main_window.dumpGeometry()
-                             if use_ctrlw_geometry else None),
-                'meas_params': (self.main_window.serializeMeasParams()
-                                if use_meas_params else None),
+            "platform": sys.platform,
+            "geometry_hash": self._getGeometryHash(),
+            "control_window": {
+                "geometry": (
+                    self.main_window.dumpGeometry() if use_ctrlw_geometry else None
+                ),
+                "meas_params": (
+                    self.main_window.serializeMeasParams() if use_meas_params else None
+                ),
             },
-            'devices': {},
-            'device_groups': [],
-            'channels': {},
+            "devices": {},
+            "device_groups": [],
+            "channels": {},
         }
 
         if device_list is None:
@@ -525,20 +548,22 @@ class AbstractApplication(object):
             if device._parent is not None:
                 continue
 
-            profile['devices'][name] = {}
-            device._serialize(profile['devices'][name])
+            profile["devices"][name] = {}
+            device._serialize(profile["devices"][name])
 
         if not use_devw_geometries:
-            for name, state in profile['devices'].items():
-                del state['geometry']
+            for name, state in profile["devices"].items():
+                del state["geometry"]
 
         for dev_grp in self.device_groups:
-            profile['device_groups'].append({
-                'class': dev_grp.__class__.__name__,
-                'title': dev_grp.windowTitle()[:-8],
-                'custom': dev_grp.serialize(),
-                'geometry': dev_grp.dumpGeometry()
-            })
+            profile["device_groups"].append(
+                {
+                    "class": dev_grp.__class__.__name__,
+                    "title": dev_grp.windowTitle()[:-8],
+                    "custom": dev_grp.serialize(),
+                    "geometry": dev_grp.dumpGeometry(),
+                }
+            )
 
         if channel_list is None:
             channel_list = [c.name for c in metro.getAllChannels()]
@@ -546,51 +571,50 @@ class AbstractApplication(object):
         for channel_name in channel_list:
             channel = metro.getChannel(channel_name)
 
-            if hasattr(channel, '_custom_to_normalize'):
+            if hasattr(channel, "_custom_to_normalize"):
                 custom = {
-                    'to_normalize': channel._custom_to_normalize,
-                    'normalize_by': channel._custom_normalize_by
+                    "to_normalize": channel._custom_to_normalize,
+                    "normalize_by": channel._custom_normalize_by,
                 }
 
-            elif hasattr(channel, '_custom_to_integrate'):
+            elif hasattr(channel, "_custom_to_integrate"):
                 custom = {
-                    'to_integrate': channel._custom_to_integrate,
-                    'func': channel._custom_func
+                    "to_integrate": channel._custom_to_integrate,
+                    "func": channel._custom_func,
                 }
 
-            elif hasattr(channel, '_custom_kernel_source'):
+            elif hasattr(channel, "_custom_kernel_source"):
                 custom = {
-                    'mode': channel.mode,
-                    'kernel_source': channel._custom_kernel_source,
-                    'init_enabled': channel._custom_init_enabled,
-                    'init_source': channel._custom_init_source,
-                    'arg_variables': channel._custom_arg_variables,
-                    'arg_channels': [x.name for x in channel.input_channels]
+                    "mode": channel.mode,
+                    "kernel_source": channel._custom_kernel_source,
+                    "init_enabled": channel._custom_init_enabled,
+                    "init_source": channel._custom_init_source,
+                    "arg_variables": channel._custom_arg_variables,
+                    "arg_channels": [x.name for x in channel.input_channels],
                 }
 
-            elif hasattr(channel, '_replayed_path'):
+            elif hasattr(channel, "_replayed_path"):
                 custom = {
-                    'path': channel._replayed_path,
+                    "path": channel._replayed_path,
                 }
 
             else:
                 continue
 
-            profile['channels'][channel_name] = {
-                'freq': channel.freq,
-                'hint': channel.hint,
-                'transient': channel.transient
+            profile["channels"][channel_name] = {
+                "freq": channel.freq,
+                "hint": channel.hint,
+                "transient": channel.transient,
             }
 
             try:
-                profile['channels'][channel_name].update(
-                    shape=channel.shape,
-                    buffering=channel.buffering
+                profile["channels"][channel_name].update(
+                    shape=channel.shape, buffering=channel.buffering
                 )
             except AttributeError:
                 pass
 
-            profile['channels'][channel_name].update(custom)
+            profile["channels"][channel_name].update(custom)
 
         profiles.save(path, profile)
 
@@ -616,14 +640,12 @@ class AbstractApplication(object):
 
     @staticmethod
     def _wrapScriptedChannelKernel(arguments, body):
-        return 'def func({0}):\n    {1}'.format(
-            ','.join(arguments),
-            body.replace("\n", "\n    ").replace("\t", "    ")
+        return "def func({0}):\n    {1}".format(
+            ",".join(arguments), body.replace("\n", "\n    ").replace("\t", "    ")
         )
 
     @staticmethod
-    def _linkScriptedChannelKernel(init_object, kernel_object,
-                                   kernel_name='func'):
+    def _linkScriptedChannelKernel(init_object, kernel_object, kernel_name="func"):
         locals_ = {}
         globals_ = globals().copy()
 
@@ -644,6 +666,7 @@ class CoreApplication(QtCore.QCoreApplication, AbstractApplication):
 
         # Properly handle CTRL+C on the console
         import signal
+
         signal.signal(signal.SIGINT, signal.SIG_DFL)
 
         super().__init__(argv_left)
@@ -672,10 +695,10 @@ class CoreApplication(QtCore.QCoreApplication, AbstractApplication):
 
     # details may be an exception, producing a stack trace
     def showError(self, title, text, details=None, log=log):
-        msg = '!ERROR\t{0}\n\t{1}'.format(title, text)
+        msg = "!ERROR\t{0}\n\t{1}".format(title, text)
 
         if details is not None and not isinstance(details, Exception):
-            msg += '\n\t({0})'.format(details)
+            msg += "\n\t({0})".format(details)
 
         log.error(msg)
         print(msg, flush=True)
@@ -687,66 +710,83 @@ class CoreApplication(QtCore.QCoreApplication, AbstractApplication):
         if isinstance(e, RuntimeError):
             text = str(e)
         else:
-            text = '{0}: {1}'.format(e.__class__.__name__, str(e))
+            text = "{0}: {1}".format(e.__class__.__name__, str(e))
 
         self.showError(title, text, details=e, log=log)
 
     def _getGeometryHash(self):
         geometry_hash = hashlib.md5()
-        geometry_hash.update(b'core mode')
+        geometry_hash.update(b"core mode")
 
         return geometry_hash.hexdigest()
 
     def _loadDevice(self, entry_point, device_class, name, state):
         if issubclass(device_class, metro.WidgetDevice):
-            raise NotImplementedError('WidgetDevice not supported in core '
-                                      'mode')
+            raise NotImplementedError("WidgetDevice not supported in core mode")
 
         return super()._loadDevice(entry_point, device_class, name, state)
 
-    def findChannelByDialog(self, selected_channel=None, excluded_channels=[],
-                            hint=None, freq=None, type_=None, shape=None):
-        raise RuntimeError('not supported in core mode')
+    def findChannelByDialog(
+        self,
+        selected_channel=None,
+        excluded_channels=[],
+        hint=None,
+        freq=None,
+        type_=None,
+        shape=None,
+    ):
+        raise RuntimeError("not supported in core mode")
 
     def displayRawChannel(self, channel):
-        raise RuntimeError('not supported in core mode')
+        raise RuntimeError("not supported in core mode")
 
     def editCustomChannel(self, channel):
-        raise RuntimeError('not supported in core mode')
+        raise RuntimeError("not supported in core mode")
 
     def editNormalizedChannel(self, channel=None):
-        raise RuntimeError('not supported in core mode')
+        raise RuntimeError("not supported in core mode")
 
     def editStatisticsChannel(self, channel=None):
-        raise RuntimeError('not supported in core mode')
+        raise RuntimeError("not supported in core mode")
 
     def editScriptedChannel(self, channel=None):
-        raise RuntimeError('not supported in core mode')
+        raise RuntimeError("not supported in core mode")
 
     def createNewDevice(self, entry_point, name=None, args={}):
         try:
             device_class = metro.loadDevice(entry_point)
         except ImportError as e:
-            self.showError('An error occured when loading the device entry '
-                           'point "{}":'.format(entry_point),
-                           'The device failed to import a module or package '
-                           'during initialisation. This will usually be an '
-                           'essential dependecy, for example to allow '
-                           'hardware access. The original exception detailing '
-                           'the import error can be found in the details.\n\n',
-                           details=e)
+            self.showError(
+                'An error occured when loading the device entry point "{}":'.format(
+                    entry_point
+                ),
+                "The device failed to import a module or package "
+                "during initialisation. This will usually be an "
+                "essential dependecy, for example to allow "
+                "hardware access. The original exception detailing "
+                "the import error can be found in the details.\n\n",
+                details=e,
+            )
             return
         except Exception as e:
-            self.showException('An error occured when loading the device '
-                               'entry point "{0}":'.format(entry_point), e)
+            self.showException(
+                'An error occured when loading the device entry point "{0}":'.format(
+                    entry_point
+                ),
+                e,
+            )
             return
 
         # Allow the class to configure itself
         try:
             device_class.configure()
         except Exception as e:
-            self.showException('An error occured on configuring the device '
-                               'class "{0}":'.format(device_class), e)
+            self.showException(
+                'An error occured on configuring the device class "{0}":'.format(
+                    device_class
+                ),
+                e,
+            )
             return
 
         if name is None:
@@ -768,18 +808,20 @@ class CoreApplication(QtCore.QCoreApplication, AbstractApplication):
         try:
             d = metro.createDevice(final_name, entry_point, args=final_args)
         except Exception as e:
-            self.showException('An error occured on constructing device '
-                               '"{0}":'.format(final_name), e)
+            self.showException(
+                'An error occured on constructing device "{0}":'.format(final_name), e
+            )
             return
 
         return d
 
-    def createDisplayDevice(self, channel, entry_point=None,
-                            show_dialog=False, args={}):
-        raise RuntimeError('not supported in core mode')
+    def createDisplayDevice(
+        self, channel, entry_point=None, show_dialog=False, args={}
+    ):
+        raise RuntimeError("not supported in core mode")
 
     def screenshot(self, base_path, devices_list=None):
-        raise RuntimeError('not supported in core mode')
+        raise RuntimeError("not supported in core mode")
 
 
 class GuiApplication(QtWidgets.QApplication, AbstractApplication):
@@ -789,26 +831,28 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
         # Now actually construct the QApplication instance
         super().__init__(argv_left)
 
-        logo_path = metro.resource_filename(__name__, 'logo.png')
+        with importlib.resources.path(__package__, "logo.png") as fspath:
+            logo_path = str(fspath)
+            # Create and show the splash screen during loading
+            splash = QtWidgets.QSplashScreen(QtGui.QPixmap(logo_path))
+            splash.show()
 
-        # Create and show the splash screen during loading
-        splash = QtWidgets.QSplashScreen(QtGui.QPixmap(logo_path))
-        splash.show()
+            # Ensure that the splash screen gets painted immediately, since the
+            # event loop is not yet running
+            self.processEvents()
 
-        # Ensure that the splash screen gets painted immediately, since the
-        # event loop is not yet running
-        self.processEvents()
-
-        self.setApplicationName(metro.WINDOW_TITLE)
-        self.setWindowIcon(QtGui.QIcon(logo_path))
+            self.setApplicationName(metro.WINDOW_TITLE)
+            self.setWindowIcon(QtGui.QIcon(logo_path))
 
         self.dialogs = []
 
-        globals().update({
-            'controller': controller,
-            'dialogs': dialogs,
-            'display_devices': display_devices
-        })
+        globals().update(
+            {
+                "controller": controller,
+                "dialogs": dialogs,
+                "display_devices": display_devices,
+            }
+        )
 
         self.main_window = controller.MainWindow()
 
@@ -851,13 +895,13 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
         self.main_window.deviceOperatorsChanged()
 
     def startKioskDefault(self):
-        raise RuntimeError('profile is required in kiosk mode')
+        raise RuntimeError("profile is required in kiosk mode")
 
     # details may be an exception, producing a stack trace
     def showError(self, title, text, details=None, log=log):
         msgBox = QtWidgets.QMessageBox()
 
-        msgBox.setWindowTitle(f'Error - {metro.WINDOW_TITLE}')
+        msgBox.setWindowTitle(f"Error - {metro.WINDOW_TITLE}")
         msgBox.setText(title)
         msgBox.setIcon(QtWidgets.QMessageBox.Critical)
 
@@ -866,20 +910,22 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
 
         if details is not None:
             if isinstance(details, Exception):
-                details = ''.join(traceback.format_exception(
-                    type(details), details, details.__traceback__
-                ))
+                details = "".join(
+                    traceback.format_exception(
+                        type(details), details, details.__traceback__
+                    )
+                )
 
-            msg += '\n\t{0}'.format(details)
+            msg += "\n\t{0}".format(details)
             msgBox.setDetailedText(details)
 
         log.error(msg)
 
         # Dirty hack from qt-project.org to increase the MessageBox
         # width by adding a spacer to its QGridLayout
-        spacer = QtWidgets.QSpacerItem(500, 0,
-                                       QtWidgets.QSizePolicy.Minimum,
-                                       QtWidgets.QSizePolicy.Expanding)
+        spacer = QtWidgets.QSpacerItem(
+            500, 0, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding
+        )
 
         layout = msgBox.layout()
         layout.addItem(spacer, layout.rowCount(), 0, 1, layout.columnCount())
@@ -893,7 +939,7 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
         if isinstance(e, RuntimeError):
             text = str(e)
         else:
-            text = '{0}: {1}'.format(e.__class__.__name__, str(e))
+            text = "{0}: {1}".format(e.__class__.__name__, str(e))
 
         self.showError(title, text, details=e, log=log)
 
@@ -904,10 +950,10 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
         for i in range(desktop_widget.screenCount()):
             screen_geometry = desktop_widget.screenGeometry(i)
 
-            geometry_hash.update(str(screen_geometry.top()).encode('ascii'))
-            geometry_hash.update(str(screen_geometry.left()).encode('ascii'))
-            geometry_hash.update(str(screen_geometry.x()).encode('ascii'))
-            geometry_hash.update(str(screen_geometry.y()).encode('ascii'))
+            geometry_hash.update(str(screen_geometry.top()).encode("ascii"))
+            geometry_hash.update(str(screen_geometry.left()).encode("ascii"))
+            geometry_hash.update(str(screen_geometry.x()).encode("ascii"))
+            geometry_hash.update(str(screen_geometry.y()).encode("ascii"))
 
         return geometry_hash.hexdigest()
 
@@ -917,36 +963,41 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
         except TypeError:
             return
 
-        if profile['control_window']['geometry'] is not None and use_geometry:
-            self.main_window.restoreGeometry(
-                profile['control_window']['geometry']
-            )
+        if profile["control_window"]["geometry"] is not None and use_geometry:
+            self.main_window.restoreGeometry(profile["control_window"]["geometry"])
 
-        pcw = profile['control_window']
+        pcw = profile["control_window"]
 
         # Convert older profile format
-        if 'quick_meas_params' in pcw:
+        if "quick_meas_params" in pcw:
             # Special case for compatibility with older profiles
-            pcw['meas_params'] = pcw['quick_meas_params']
-            pcw['meas_params']['full'] = None
+            pcw["meas_params"] = pcw["quick_meas_params"]
+            pcw["meas_params"]["full"] = None
 
         # Do this last since it may depend on devices
-        if pcw['meas_params'] is not None:
-            self.main_window.restoreMeasParams(pcw['meas_params'])
+        if pcw["meas_params"] is not None:
+            self.main_window.restoreMeasParams(pcw["meas_params"])
 
     def _createDialog(self, diag):
-        diag.accepted.connect(QtCore.pyqtSlot()(
-            lambda: metro.app.dialogs.remove(diag)
-        ))
+        diag.accepted.connect(QtCore.pyqtSlot()(lambda: metro.app.dialogs.remove(diag)))
         self.dialogs.append(diag)
 
         return diag
 
-    def findChannelByDialog(self, selected_channel=None, excluded_channels=[],
-                            hint=None, freq=None, type_=None, shape=None):
-        diag = self._createDialog(dialogs.SelectChannelDialog(
-            selected_channel, excluded_channels, hint, freq, type_, shape
-        ))
+    def findChannelByDialog(
+        self,
+        selected_channel=None,
+        excluded_channels=[],
+        hint=None,
+        freq=None,
+        type_=None,
+        shape=None,
+    ):
+        diag = self._createDialog(
+            dialogs.SelectChannelDialog(
+                selected_channel, excluded_channels, hint, freq, type_, shape
+            )
+        )
 
         if diag.exec_() == QtWidgets.QDialog.Rejected:
             return None
@@ -958,16 +1009,17 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
         diag.show()
 
     def editCustomChannel(self, channel):
-        if hasattr(channel, '_custom_to_normalize'):
+        if hasattr(channel, "_custom_to_normalize"):
             self.editNormalizedChannel(channel)
-        elif hasattr(channel, '_custom_to_integrate'):
+        elif hasattr(channel, "_custom_to_integrate"):
             self.editStatisticsChannel(channel)
-        elif hasattr(channel, '_custom_kernel_source'):
+        elif hasattr(channel, "_custom_kernel_source"):
             self.editScriptedChannel(channel)
         else:
-            metro.app.showError('A conflicting channel parameter was '
-                                'encountered:', 'Could not find any custom '
-                                'properties on this channel.')
+            metro.app.showError(
+                "A conflicting channel parameter was encountered:",
+                "Could not find any custom properties on this channel.",
+            )
 
     def editNormalizedChannel(self, channel=None):
         diag = self._createDialog(dialogs.EditNormalizedChannelDialog(channel))
@@ -985,26 +1037,38 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
         try:
             device_class = metro.loadDevice(entry_point)
         except ImportError as e:
-            self.showError('An error occured when loading the device entry '
-                           'point "{}":'.format(entry_point),
-                           'The device failed to import a module or package '
-                           'during initialisation. This will usually be an '
-                           'essential dependecy, for example to allow '
-                           'hardware access. The original exception '
-                           'detailing the import error can be found in the '
-                           'details.', details=e)
+            self.showError(
+                'An error occured when loading the device entry point "{}":'.format(
+                    entry_point
+                ),
+                "The device failed to import a module or package "
+                "during initialisation. This will usually be an "
+                "essential dependecy, for example to allow "
+                "hardware access. The original exception "
+                "detailing the import error can be found in the "
+                "details.",
+                details=e,
+            )
             return
         except Exception as e:
-            self.showException('An error occured when loading the device '
-                               'entry point "{0}":'.format(entry_point), e)
+            self.showException(
+                'An error occured when loading the device entry point "{0}":'.format(
+                    entry_point
+                ),
+                e,
+            )
             return
 
         # Allow the class to configure itself
         try:
             device_class.configure()
         except Exception as e:
-            self.showException('An error occured on configuring the device '
-                               'class "{0}":'.format(device_class), e)
+            self.showException(
+                'An error occured on configuring the device class "{0}":'.format(
+                    device_class
+                ),
+                e,
+            )
             return
 
         if name is None:
@@ -1026,34 +1090,36 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
         try:
             d = metro.createDevice(entry_point, final_name, args=final_args)
         except Exception as e:
-            self.showException('An error occured on constructing device '
-                               '"{0}":'.format(final_name), e)
+            self.showException(
+                'An error occured on constructing device "{0}":'.format(final_name), e
+            )
             return
 
         return d
 
-    def createDisplayDevice(self, channel, entry_point=None, show_dialog=False,
-                            args={}):
+    def createDisplayDevice(
+        self, channel, entry_point=None, show_dialog=False, args={}
+    ):
         channel_name = channel.name
 
         if entry_point is None:
             try:
-                entry_point = channel.display_arguments['__default__']
+                entry_point = channel.display_arguments["__default__"]
             except KeyError:
                 entry_point = display_devices.getDefault(channel)
 
             if entry_point is None:
                 self.showError(
-                    'An error occured on creating a display device:',
-                    'No default device entry point found to display channel '
+                    "An error occured on creating a display device:",
+                    "No default device entry point found to display channel "
                     '"{0}".\n\nThis may happen because this channel does not '
-                    'have an obvious presentation based on its properties '
-                    'such as in the case of raw detector channels.\nIf you '
-                    'know which display device to use, you can open it '
+                    "have an obvious presentation based on its properties "
+                    "such as in the case of raw detector channels.\nIf you "
+                    "know which display device to use, you can open it "
                     'manually or use "Display by" in its context menu. If '
                     'not, you can use "Display raw" to get generic '
-                    'information about its properties and content if '
-                    'applicable.'.format(channel_name)
+                    "information about its properties and content if "
+                    "applicable.".format(channel_name),
                 )
                 return
 
@@ -1061,30 +1127,29 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
 
         try:
             if not device_class.isChannelSupported(channel):
-                raise ValueError('channel not supported')
+                raise ValueError("channel not supported")
         except ValueError as e:
-            self.showError('An error occured on constructing a display '
-                           'device:', str(e))
+            self.showError("An error occured on constructing a display device:", str(e))
             return None
 
-        device_name = metro.getAvailableDeviceName('{0}[{1}]'.format(
-            channel_name, entry_point[entry_point.rfind('.')+1:])
+        device_name = metro.getAvailableDeviceName(
+            "{0}[{1}]".format(channel_name, entry_point[entry_point.rfind(".") + 1 :])
         )
 
-        final_args = {'channel': channel}
+        final_args = {"channel": channel}
 
         for key, value in channel.display_arguments.items():
             if key.startswith(entry_point):
-                final_args[key[len(entry_point)+1:]] = value
+                final_args[key[len(entry_point) + 1 :]] = value
 
         final_args.update(args)
 
         if show_dialog:
-            display_device = self.createNewDevice(entry_point, device_name,
-                                                  final_args)
+            display_device = self.createNewDevice(entry_point, device_name, final_args)
         else:
-            display_device = metro.createDevice(entry_point, device_name,
-                                                args=final_args)
+            display_device = metro.createDevice(
+                entry_point, device_name, args=final_args
+            )
 
         return display_device
 
@@ -1135,9 +1200,9 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
             pixmap._height = cur_size.height() + 20
             pixmap._width = cur_size.width() + 15
 
-            if '[' in d._name:
+            if "[" in d._name:
                 display_device_pixmaps.append(pixmap)
-                displayed_device_names.add(d._name[:d._name.find('#')])
+                displayed_device_names.add(d._name[: d._name.find("#")])
             else:
                 regular_device_pixmaps.append(pixmap)
 
@@ -1200,8 +1265,8 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
 
         painter.drawPixmap(0, 0, controller_pixmap)
         for pixmap in regular_device_pixmaps:
-            painter.drawText(pixmap._x+18, pixmap._y+15, pixmap._name)
-            painter.drawPixmap(pixmap._x+15, pixmap._y+18, pixmap)
+            painter.drawText(pixmap._x + 18, pixmap._y + 15, pixmap._name)
+            painter.drawPixmap(pixmap._x + 15, pixmap._y + 18, pixmap)
 
         painter.end()
 
@@ -1216,7 +1281,7 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
 
             cur_pixmaps = []
 
-            channel_start = device_name + '#'
+            channel_start = device_name + "#"
 
             for pixmap in display_device_pixmaps:
                 if not pixmap._name.startswith(channel_start):
@@ -1239,8 +1304,8 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
 
             cur_y = 0
             for pixmap in cur_pixmaps:
-                painter.drawText(3, cur_y+15, pixmap._name)
-                painter.drawPixmap(0, cur_y+18, pixmap)
+                painter.drawText(3, cur_y + 15, pixmap._name)
+                painter.drawPixmap(0, cur_y + 18, pixmap)
                 cur_y += pixmap._height
 
             displayed_device_images.append(cur_image)
@@ -1307,9 +1372,11 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
                 painter.drawImage(image._x, image._y, image)
             painter.end()
 
-        total_image = QtGui.QImage(max(upper_width, lower_width),
-                                   upper_height + lower_height + 50,
-                                   IMAGE_FORMAT)
+        total_image = QtGui.QImage(
+            max(upper_width, lower_width),
+            upper_height + lower_height + 50,
+            IMAGE_FORMAT,
+        )
         total_image.fill(IMAGE_BACKGROUND)
 
         painter = QtGui.QPainter(total_image)
@@ -1324,10 +1391,14 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
         footer_y = upper_height + lower_height
         painter.drawText(3, footer_y + 15, os.path.basename(base_path))
         painter.drawText(3, footer_y + 30, str(metro.version))
-        painter.drawText(3, footer_y + 45,
-                         'Python {0[0]}.{0[1]}.{0[2]}-{0[3]}{0[4]} '
-                         'on {1}'.format(sys.version_info, sys.platform))
+        painter.drawText(
+            3,
+            footer_y + 45,
+            "Python {0[0]}.{0[1]}.{0[2]}-{0[3]}{0[4]} on {1}".format(
+                sys.version_info, sys.platform
+            ),
+        )
 
         painter.end()
 
-        total_image.save(base_path + '.jpg', 'jpg', 100)
+        total_image.save(base_path + ".jpg", "jpg", 100)
