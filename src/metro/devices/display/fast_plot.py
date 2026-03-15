@@ -172,6 +172,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.stacking = state.pop('stacking', 0.0)
         self.show_marker = state.pop('show_marker', args['show_marker'])
         self.show_legend = state.pop('show_legend', True)
+        self.show_annotations = state.pop('show_annotations', True)
         self.downsampling = state.pop('downsampling', args['downsampling'])
 
         if lttbc is None:
@@ -303,6 +304,11 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         self.menuContext.addSeparator()
 
+        self.actionTitleColor = self.menuContext.addAction(
+            'Set plot title color...')
+
+        self.menuContext.addSeparator()
+
         self.actionShowMarker = self.menuContext.addAction(
             'Show point markers')
         self.actionShowMarker.setCheckable(True)
@@ -312,6 +318,11 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             'Show scan legend')
         self.actionShowLegend.setCheckable(True)
         self.actionShowLegend.setChecked(self.show_legend)
+
+        self.actionShowAnnotations = self.menuContext.addAction(
+            'Show annotations')
+        self.actionShowAnnotations.setCheckable(True)
+        self.actionShowAnnotations.setChecked(self.show_annotations)
 
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.on_menuContext_requested)
@@ -384,6 +395,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             'stacking': self.stacking,
             'show_marker': self.show_marker,
             'show_legend': self.show_legend,
+            'show_annotations': self.show_annotations,
             'downsampling': self.downsampling
         }
 
@@ -528,9 +540,9 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         p.setPen(self.lines_color)
 
         # Vertical annotation lines.
-        if self.vlines is not None:
+        if self.vlines is not None and self.show_annotations:
             div = self.plot_transform[0]
-            y_end = -self.plot_geometry[3]
+            y_end = int(-self.plot_geometry[3])
 
             p.save()
             p.translate(
@@ -546,8 +558,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
             for x_data, text in vlines_it:
                 if self.plot_axes[0] < x_data < self.plot_axes[1]:
-                    x_widget = x_data * div
-                    p.drawLine(x_widget, 0.0, x_widget, y_end)
+                    x_widget = int(x_data * div)
+                    p.drawLine(x_widget, 0, x_widget, y_end)
 
                     if text is not None:
                         p.drawText(p.boundingRect(
@@ -557,9 +569,9 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             p.restore()
 
         # Horizontal annotation lines.
-        if self.hlines is not None:
+        if self.hlines is not None and self.show_annotations:
             div = self.plot_transform[1]
-            x_end = self.plot_geometry[2]
+            x_end = int(self.plot_geometry[2])
 
             p.save()
             p.translate(
@@ -575,8 +587,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
             for y_data, text in hlines_it:
                 if self.plot_axes[2] < y_data < self.plot_axes[3]:
-                    y_widget = -y_data * div
-                    p.drawLine(0.0, y_widget, x_end, y_widget)
+                    y_widget = int(-y_data * div)
+                    p.drawLine(0, y_widget, x_end, y_widget)
 
                     if text is not None:
                         p.drawText(p.boundingRect(
@@ -779,7 +791,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
     def _buildAxisLabel(self, value, x, y, p, flags):
         text = str(value)
 
-        r = p.boundingRect(x, y, 1, 1, flags, text)
+        r = p.boundingRect(int(x), int(y), 1, 1, flags, text)
         r._flags = flags
         r._str = text
 
@@ -1098,6 +1110,17 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
             self.dataAdded(self.ch_data)
 
+        elif action == self.actionTitleColor:
+            new_color = QtWidgets.QColorDialog.getColor(
+                self.title_color, None, self.windowTitle(),
+                QtWidgets.QColorDialog.ShowAlphaChannel)
+
+            if new_color is None:
+                return
+
+            self.title_color = new_color
+            self.repaint(title_changed=True)
+
         elif action == self.actionShowMarker:
             self.show_marker = self.actionShowMarker.isChecked()
             self.repaint(data_changed=True)
@@ -1105,6 +1128,10 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         elif action == self.actionShowLegend:
             self.show_legend = self.actionShowLegend.isChecked()
             super().repaint()  # Trigger direct repaint as nothing is cached.
+
+        elif action == self.actionShowAnnotations:
+            self.show_annotations = self.actionShowAnnotations.isChecked()
+            super().repaint()
 
     # @metro.QSlot(QtCore.QAction)
     def on_menuDownsampling_triggered(self, action):
