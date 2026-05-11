@@ -99,7 +99,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
 
         for entry in self.data[::-1]:
             qp.drawText(20, cur_y, self.base_func(entry[0], max_index))
-            qp.fillRect(80, cur_y-9, (entry[1]/max_value)*(width-100), 10,
+            qp.fillRect(80, cur_y-9, int((entry[1]/max_value)*(width-100)), 10,
                         QtCore.Qt.white)
 
             cur_y += 15

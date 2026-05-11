@@ -435,14 +435,14 @@ class BrowseStorageDialog(QtWidgets.QDialog):
                     number = parts[0]
                     name_idx = 1
 
-                time = parts[-2]
-                date = parts[-1]
+                time = parts[-1]
+                date = parts[-2]
 
                 # number, name, time, date, channel_count
                 new_files.append([
                     number, '_'.join(parts[name_idx:-2]),
-                    '{0}:{1}:{2}'.format(time[:2], time[2:4], time[4:]),
                     '{0}.{1}.{2}'.format(date[:2], date[2:4], date[4:]),
+                    '{0}:{1}:{2}'.format(time[:2], time[2:4], time[4:]),
                     0, filename]
                 )
 
@@ -521,7 +521,7 @@ class BrowseStorageDialog(QtWidgets.QDialog):
                 if index.column() == 4:
                     details = self.files[index.row()]
 
-                    channel_idx = len(details[5])+1
+                    channel_idx = len(details[5]) + 1
                     channel_names = [s[channel_idx:-4] for s in details[6:]]
 
                     return '\n'.join(sorted(channel_names))
@@ -533,7 +533,7 @@ class BrowseStorageDialog(QtWidgets.QDialog):
 
             new_root = '{0}{1}_{2}_{3}'.format(
                 details[0] + '_' if details[0] else '', details[1],
-                details[2].replace(':', ''), details[3].replace('.', '')
+                details[2].replace('.', ''), details[3].replace(':', '')
             )
 
             if details[5] == new_root:

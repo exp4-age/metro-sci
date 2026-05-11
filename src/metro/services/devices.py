@@ -21,6 +21,9 @@ from typing import Optional
 import metro
 from metro.services import channels
 
+from metro.services import logger
+log = logger.log(__name__)
+
 QtCore = metro.QtCore
 QtWidgets = metro.QtWidgets
 QtUic = metro.QtUic
@@ -131,6 +134,8 @@ def create(entry_point, name, parent=None, args=None, state=None):
 
     if parent is not None:
         parent._child_count += 1
+
+    log.info('Device "{0}" created'.format(name))
 
     return dev
 
@@ -492,6 +497,8 @@ class GenericDevice(metro.measure.Node):
         else:
             _morgue.append(name)
 
+        log.info('Device "{0}" killed'.format(self.getDeviceName()))
+
     def getDeviceName(self):
         """
         Get the name of this device.
@@ -737,7 +744,7 @@ class GenericDevice(metro.measure.Node):
             if slots[3] is not None:
                 finalized.connect(slots[3])
 
-    def showError(self, text, details=None):
+    def showError(self, text, details=None, log=log):
         """
         Display an error dialog.
 
@@ -754,10 +761,10 @@ class GenericDevice(metro.measure.Node):
 
         metro.app.showError(
             'An error has occured in device <i>{0}</i>:'.format(self._name),
-            text, details
+            text, details, log
         )
 
-    def showException(self, e):
+    def showException(self, e, log=log):
         """
         Display an error dialog for an exception.
 
@@ -771,7 +778,7 @@ class GenericDevice(metro.measure.Node):
             e: The exception to be displayed.
         """
 
-        self.showError(str(e), e)
+        self.showError(str(e), e, log)
 
     # def show(self)
     # def hide(self)
