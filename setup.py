@@ -86,7 +86,7 @@ setup(
     ], language_level=3, build_dir='build'),
 
     python_requires='>=3.11',
-    install_requires=['typing', 'PyQt5', 'numpy', 'scipy', 'h5py', 'xarray'],
+    install_requires=['typing', 'PyQt5', 'numpy', 'scipy', 'h5py', 'xarray',  'pyqtgraph'],
 
     classifiers=[
         'Development Status :: 5 - Production/Stable',
